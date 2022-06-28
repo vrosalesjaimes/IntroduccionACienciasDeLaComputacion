@@ -28,8 +28,8 @@ public class Estudiante {
                       int    edad) {
         this.nombre = nombre;
         this.cuenta = cuenta;
-	this.promedio = promedio;
-	this.edad = edad;
+	    this.promedio = promedio;
+	    this.edad = edad;
     }
 
     /**

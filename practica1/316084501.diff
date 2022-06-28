@@ -1,5 +1,5 @@
 diff --git a/src/main/java/mx/unam/ciencias/icc/Estudiante.java b/src/main/java/mx/unam/ciencias/icc/Estudiante.java
-index 470a28e..ba29565 100644
+index 470a28e..f55dc9a 100644
 --- a/src/main/java/mx/unam/ciencias/icc/Estudiante.java
 +++ b/src/main/java/mx/unam/ciencias/icc/Estudiante.java
 @@ -26,8 +26,10 @@ public class Estudiante {
@@ -10,8 +10,8 @@ index 470a28e..ba29565 100644
 -        // Aquí va su código.
 +        this.nombre = nombre;
 +        this.cuenta = cuenta;
-+	this.promedio = promedio;
-+	this.edad = edad;
++	    this.promedio = promedio;
++	    this.edad = edad;
      }
  
      /**
