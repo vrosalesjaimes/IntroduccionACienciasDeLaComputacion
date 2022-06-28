@@ -1,0 +1,30 @@
+[submodule "practica1"]
+	path = practica1
+	url = https://canek@aztlan.fciencias.unam.mx/gitlab/2022-2-icc/practica1.git
+[submodule "practica2"]
+	path = practica2
+	url = https://canek@aztlan.fciencias.unam.mx/gitlab/2022-2-icc/practica2.git
+[submodule "practica3"]
+	path = practica3
+	url = https://canek@aztlan.fciencias.unam.mx/gitlab/2022-2-icc/practica3.git
+[submodule "practica4"]
+	path = practica4
+	url = https://canek@aztlan.fciencias.unam.mx/gitlab/2022-2-icc/practica4.git
+[submodule "practica5"]
+	path = practica5
+	url = https://canek@aztlan.fciencias.unam.mx/gitlab/2022-2-icc/practica5.git
+[submodule "practica6"]
+	path = practica6
+	url = https://canek@aztlan.fciencias.unam.mx/gitlab/2022-2-icc/practica6.git
+[submodule "practica7"]
+	path = practica7
+	url = https://canek@aztlan.fciencias.unam.mx/gitlab/2022-2-icc/practica7.git
+[submodule "practica8"]
+	path = practica8
+	url = https://canek@aztlan.fciencias.unam.mx/gitlab/2022-2-icc/practica8.git
+[submodule "practica9"]
+	path = practica9
+	url = https://canek@aztlan.fciencias.unam.mx/gitlab/2022-2-icc/practica9.git
+[submodule "practica10"]
+	path = practica10
+	url = https://canek@aztlan.fciencias.unam.mx/gitlab/2022-2-icc/practica10.git
