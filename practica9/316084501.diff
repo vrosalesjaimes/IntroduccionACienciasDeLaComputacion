@@ -1,0 +1,1141 @@
+diff --git a/src/main/java/mx/unam/ciencias/icc/Arreglos.java b/src/main/java/mx/unam/ciencias/icc/Arreglos.java
+index cb53134..db3bb5d 100644
+--- a/src/main/java/mx/unam/ciencias/icc/Arreglos.java
++++ b/src/main/java/mx/unam/ciencias/icc/Arreglos.java
+@@ -28,7 +28,15 @@ public class Arreglos {
+      */
+     public static <T> void
+     selectionSort(T[] arreglo, Comparator<T> comparador) {
+-        // Aquí va su código.
++        for(int i = 0; i < arreglo.length; i++){
++	    int m = i;
++	    for(int j = i+1; j < arreglo.length; j++){
++		if(comparador.compare(arreglo[j], arreglo[m]) < 0){
++		    m = j;
++		}
++	    }
++	    intercambia(arreglo, i, m);
++	}
+     }
+ 
+     /**
+@@ -49,7 +57,27 @@ public class Arreglos {
+      */
+     public static <T> void
+     quickSort(T[] arreglo, Comparator<T> comparador) {
+-        // Aquí va su código.
++        QuickSort(arreglo, comparador, 0,  arreglo.length-1);
++    }
++
++    private static <T> void QuickSort(T[] arreglo,Comparator<T> comparador, int a, int b){
++	if(b <= a) return;
++	int i = a + 1;
++	int j = b;
++	while(i < j){
++	    if(comparador.compare(arreglo[i], arreglo[a]) > 0 && comparador.compare(arreglo[j], arreglo[a]) <= 0 ){
++		intercambia(arreglo, i++, j--);
++	    }
++	    else if(comparador.compare(arreglo[i], arreglo[a]) <= 0)
++		i++;
++	    else
++		j--;
++	}
++	if(comparador.compare(arreglo[i], arreglo[a]) > 0)
++	    i--;
++	intercambia(arreglo, i, a);
++	QuickSort(arreglo,comparador, a, i-1);
++	QuickSort(arreglo,comparador, i+1, b);
+     }
+ 
+     /**
+@@ -76,6 +104,19 @@ public class Arreglos {
+      */
+     public static <T> int
+     busquedaBinaria(T[] arreglo, T elemento, Comparator<T> comparador) {
+-        // Aquí va su código.
++        int indice = 0;
++	int longitud = arreglo.length;
++	while(indice < longitud){
++	    if(comparador.compare(arreglo[indice],elemento) == 0) return indice;
++	    indice++;
++	}
++	return -1;
++    }
++
++    private static <T> void intercambia(T[] array,int index_1, int index_2){
++	T elmt_1 = array[index_1];
++	T elmt_2 = array[index_2];
++	array[index_1] = elmt_2;
++	array[index_2] = elmt_1;
+     }
+ }
+diff --git a/src/main/java/mx/unam/ciencias/icc/BaseDeDatos.java b/src/main/java/mx/unam/ciencias/icc/BaseDeDatos.java
+index 0e020cf..1d8f7e2 100644
+--- a/src/main/java/mx/unam/ciencias/icc/BaseDeDatos.java
++++ b/src/main/java/mx/unam/ciencias/icc/BaseDeDatos.java
+@@ -32,7 +32,8 @@ public abstract class BaseDeDatos<R extends Registro<R, C>, C extends Enum> {
+      * Constructor único.
+      */
+     public BaseDeDatos() {
+-        // Aquí va su código.
++        registros = new Lista<R>();
++	escuchas = new Lista<EscuchaBaseDeDatos<R>>();
+     }
+ 
+     /**
+@@ -40,7 +41,7 @@ public abstract class BaseDeDatos<R extends Registro<R, C>, C extends Enum> {
+      * @return el número de registros en la base de datos.
+      */
+     public int getNumRegistros() {
+-        // Aquí va su código.
++	return registros.getLongitud();
+     }
+ 
+     /**
+@@ -49,7 +50,7 @@ public abstract class BaseDeDatos<R extends Registro<R, C>, C extends Enum> {
+      * @return una lista con los registros en la base de datos.
+      */
+     public Lista<R> getRegistros() {
+-        // Aquí va su código.
++        return registros.copia();
+     }
+ 
+     /**
+@@ -59,7 +60,9 @@ public abstract class BaseDeDatos<R extends Registro<R, C>, C extends Enum> {
+      * @param registro el registro que hay que agregar a la base de datos.
+      */
+     public void agregaRegistro(R registro) {
+-        // Aquí va su código.
++        registros.agregaFinal(registro);
++	for(EscuchaBaseDeDatos<R> escucha : this.escuchas)
++	    escucha.baseDeDatosModificada(EventoBaseDeDatos.REGISTRO_AGREGADO, registro, null);
+     }
+ 
+     /**
+@@ -69,7 +72,9 @@ public abstract class BaseDeDatos<R extends Registro<R, C>, C extends Enum> {
+      * @param registro el registro que hay que eliminar de la base de datos.
+      */
+     public void eliminaRegistro(R registro) {
+-        // Aquí va su código.
++        registros.elimina(registro);
++        for(EscuchaBaseDeDatos<R> escucha : this.escuchas)
++            escucha.baseDeDatosModificada(EventoBaseDeDatos.REGISTRO_ELIMINADO, registro, null);
+     }
+ 
+     /**
+@@ -86,7 +91,17 @@ public abstract class BaseDeDatos<R extends Registro<R, C>, C extends Enum> {
+      *         <code>null</code>.
+      */
+     public void modificaRegistro(R registro1, R registro2) {
+-        // Aquí va su código.
++        if(registro1 == null || registro2 == null)
++	    throw new IllegalArgumentException("Alguno de los registros es nulo");
++
++	for(R registro: this.registros){
++	    if(registro.equals(registro1)){
++		for(EscuchaBaseDeDatos<R> escucha : this.escuchas)
++		    escucha.baseDeDatosModificada(EventoBaseDeDatos.REGISTRO_MODIFICADO, registro1, registro2);
++		
++		registro.actualiza(registro2);
++	    }
++        }
+     }
+ 
+     /**
+@@ -95,7 +110,10 @@ public abstract class BaseDeDatos<R extends Registro<R, C>, C extends Enum> {
+      * EventoBaseDeDatos#BASE_LIMPIADA}
+      */
+     public void limpia() {
+-        // Aquí va su código.
++        registros.limpia();
++	
++        for(EscuchaBaseDeDatos<R> escucha : this.escuchas)
++            escucha.baseDeDatosModificada(EventoBaseDeDatos.BASE_LIMPIADA, null, null);
+     }
+ 
+     /**
+@@ -104,7 +122,8 @@ public abstract class BaseDeDatos<R extends Registro<R, C>, C extends Enum> {
+      * @throws IOException si ocurre un error de entrada/salida.
+      */
+     public void guarda(BufferedWriter out) throws IOException {
+-        // Aquí va su código.
++        for(R registro : registros)
++	    out.write(registro.serializa());
+     }
+ 
+     /**
+@@ -119,7 +138,27 @@ public abstract class BaseDeDatos<R extends Registro<R, C>, C extends Enum> {
+      * @throws IOException si ocurre un error de entrada/salida.
+      */
+     public void carga(BufferedReader in) throws IOException {
+-        // Aquí va su código.
++        limpia();
++
++	for(EscuchaBaseDeDatos<R> escucha : escuchas)
++	    escucha.baseDeDatosModificada(EventoBaseDeDatos.BASE_LIMPIADA, null, null);
++
++	String linea;
++
++	while((linea = in.readLine()) != null){
++	    if(linea.trim().equals(""))
++		break;
++	    
++	    R reg = creaRegistro();
++
++	    try {
++                reg.deserializa(linea);
++            } catch (ExcepcionLineaInvalida e) {
++                throw new IOException();
++            }
++
++	    agregaRegistro(reg);
++	}
+     }
+ 
+     /**
+@@ -132,7 +171,14 @@ public abstract class BaseDeDatos<R extends Registro<R, C>, C extends Enum> {
+      *         correcta.
+      */
+     public Lista<R> buscaRegistros(C campo, Object valor) {
+-        // Aquí va su código.
++        Lista<R> lista = new Lista<R>();
++
++	for (R registro : registros) {
++            if (registro.caza(campo, valor))
++                lista.agregaFinal(registro);
++        }
++	
++        return lista;
+     }
+ 
+     /**
+@@ -146,7 +192,7 @@ public abstract class BaseDeDatos<R extends Registro<R, C>, C extends Enum> {
+      * @param escucha el escucha a agregar.
+      */
+     public void agregaEscucha(EscuchaBaseDeDatos<R> escucha) {
+-        // Aquí va su código.
++        escuchas.agregaFinal(escucha);
+     }
+ 
+     /**
+@@ -154,6 +200,6 @@ public abstract class BaseDeDatos<R extends Registro<R, C>, C extends Enum> {
+      * @param escucha el escucha a eliminar.
+      */
+     public void eliminaEscucha(EscuchaBaseDeDatos<R> escucha) {
+-        // Aquí va su código.
++        escuchas.elimina(escucha);
+     }
+ }
+diff --git a/src/main/java/mx/unam/ciencias/icc/BaseDeDatosEstudiantes.java b/src/main/java/mx/unam/ciencias/icc/BaseDeDatosEstudiantes.java
+index 99253e8..dfe35fc 100644
+--- a/src/main/java/mx/unam/ciencias/icc/BaseDeDatosEstudiantes.java
++++ b/src/main/java/mx/unam/ciencias/icc/BaseDeDatosEstudiantes.java
+@@ -11,6 +11,6 @@ public class BaseDeDatosEstudiantes
+      * @return un estudiante en blanco.
+      */
+     @Override public Estudiante creaRegistro() {
+-        // Aquí va su código.
++	return new Estudiante(null, 0,0,0);
+     }
+ }
+diff --git a/src/main/java/mx/unam/ciencias/icc/CampoEstudiante.java b/src/main/java/mx/unam/ciencias/icc/CampoEstudiante.java
+index 4a8740d..214446b 100644
+--- a/src/main/java/mx/unam/ciencias/icc/CampoEstudiante.java
++++ b/src/main/java/mx/unam/ciencias/icc/CampoEstudiante.java
+@@ -20,6 +20,12 @@ public enum CampoEstudiante {
+      * @return una representación en cadena del campo.
+      */
+     @Override public String toString() {
+-        // Aquí va su código.
++        switch(this){
++       	case NOMBRE: return "Nombre";
++	case CUENTA: return "# Cuenta";
++	case PROMEDIO: return "Promedio";
++	case EDAD: return "Edad";
++	default: throw new IllegalArgumentException();
++	}
+     }
+ }
+diff --git a/src/main/java/mx/unam/ciencias/icc/Estudiante.java b/src/main/java/mx/unam/ciencias/icc/Estudiante.java
+index eca27c3..6b2eb6c 100644
+--- a/src/main/java/mx/unam/ciencias/icc/Estudiante.java
++++ b/src/main/java/mx/unam/ciencias/icc/Estudiante.java
+@@ -16,13 +16,13 @@ import javafx.beans.property.StringProperty;
+ public class Estudiante implements Registro<Estudiante, CampoEstudiante> {
+ 
+     /* Nombre del estudiante. */
+-    private final StringProperty nombre;
++    private StringProperty nombre;
+     /* Número de cuenta. */
+-    private final IntegerProperty cuenta;
++    private IntegerProperty cuenta;
+     /* Pormedio del estudiante. */
+-    private final DoubleProperty promedio;
++    private DoubleProperty promedio;
+     /* Edad del estudiante.*/
+-    private final IntegerProperty edad;
++    private IntegerProperty edad;
+ 
+     /**
+      * Define el estado inicial de un estudiante.
+@@ -36,7 +36,9 @@ public class Estudiante implements Registro<Estudiante, CampoEstudiante> {
+                       double promedio,
+                       int    edad) {
+         this.nombre = new SimpleStringProperty(nombre);
+-        // Aquí va su código.
++	this.cuenta   = new SimpleIntegerProperty(cuenta);
++        this.promedio = new SimpleDoubleProperty(promedio);
++        this.edad     = new SimpleIntegerProperty(edad);
+     }
+ 
+     /**
+@@ -68,7 +70,7 @@ public class Estudiante implements Registro<Estudiante, CampoEstudiante> {
+      * @return el número de cuenta del estudiante.
+      */
+     public int getCuenta() {
+-        // Aquí va su código.
++        return cuenta.get();
+     }
+ 
+     /**
+@@ -76,7 +78,7 @@ public class Estudiante implements Registro<Estudiante, CampoEstudiante> {
+      * @param cuenta el nuevo número de cuenta del estudiante.
+      */
+     public void setCuenta(int cuenta) {
+-        // Aquí va su código.
++        this.cuenta.set(cuenta);
+     }
+ 
+     /**
+@@ -84,7 +86,7 @@ public class Estudiante implements Registro<Estudiante, CampoEstudiante> {
+      * @return la propiedad del número de cuenta.
+      */
+     public IntegerProperty cuentaProperty() {
+-        // Aquí va su código.
++        return this.cuenta;
+     }
+ 
+     /**
+@@ -92,7 +94,7 @@ public class Estudiante implements Registro<Estudiante, CampoEstudiante> {
+      * @return el promedio del estudiante.
+      */
+     public double getPromedio() {
+-        // Aquí va su código.
++        return promedio.get();
+     }
+ 
+     /**
+@@ -100,7 +102,7 @@ public class Estudiante implements Registro<Estudiante, CampoEstudiante> {
+      * @param promedio el nuevo promedio del estudiante.
+      */
+     public void setPromedio(double promedio) {
+-        // Aquí va su código.
++        this.promedio.set(promedio);
+     }
+ 
+     /**
+@@ -108,7 +110,7 @@ public class Estudiante implements Registro<Estudiante, CampoEstudiante> {
+      * @return la propiedad del promedio.
+      */
+     public DoubleProperty promedioProperty() {
+-        // Aquí va su código.
++        return this.promedio;
+     }
+ 
+     /**
+@@ -116,7 +118,7 @@ public class Estudiante implements Registro<Estudiante, CampoEstudiante> {
+      * @return la edad del estudiante.
+      */
+     public int getEdad() {
+-        // Aquí va su código.
++        return edad.get();
+     }
+ 
+     /**
+@@ -124,7 +126,7 @@ public class Estudiante implements Registro<Estudiante, CampoEstudiante> {
+      * @param edad la nueva edad del estudiante.
+      */
+     public void setEdad(int edad) {
+-        // Aquí va su código.
++        this.edad.set(edad);
+     }
+ 
+     /**
+@@ -132,7 +134,7 @@ public class Estudiante implements Registro<Estudiante, CampoEstudiante> {
+      * @return la propiedad de la edad.
+      */
+     public IntegerProperty edadProperty() {
+-        // Aquí va su código.
++        return this.edad;
+     }
+ 
+     /**
+@@ -140,7 +142,12 @@ public class Estudiante implements Registro<Estudiante, CampoEstudiante> {
+      * @return una representación en cadena del estudiante.
+      */
+     @Override public String toString() {
+-        // Aquí va su código.
++        return String.format(
++            "Nombre   : %s\n" +
++            "Cuenta   : %09d\n" +
++            "Promedio : %2.2f\n" +
++            "Edad     : %d",
++            nombre.get(), cuenta.get(), promedio.get(), edad.get());
+     }
+ 
+     /**
+@@ -155,7 +162,12 @@ public class Estudiante implements Registro<Estudiante, CampoEstudiante> {
+         if (!(objeto instanceof Estudiante))
+             return false;
+         Estudiante estudiante = (Estudiante)objeto;
+-        // Aquí va su código.
++	if(this.getNombre().equals(estudiante.getNombre()) &&
++	   this.getCuenta() == estudiante.getCuenta() &&
++	   this.getPromedio() == estudiante.getPromedio() &&
++	   this.getEdad() == estudiante.getEdad())
++	       return true;
++	return false;
+     }
+ 
+     /**
+@@ -165,7 +177,8 @@ public class Estudiante implements Registro<Estudiante, CampoEstudiante> {
+      * @return la serialización del estudiante en una línea de texto.
+      */
+     @Override public String serializa() {
+-        // Aquí va su código.
++        return String.format("%s\t%d\t%2.2f\t%d\n",
++			     nombre.get(), cuenta.get(), promedio.get(), edad.get());
+     }
+ 
+     /**
+@@ -177,7 +190,26 @@ public class Estudiante implements Registro<Estudiante, CampoEstudiante> {
+      *         es una serialización válida de un estudiante.
+      */
+     @Override public void deserializa(String linea) {
+-        // Aquí va su código.
++        if (linea == null || linea.equals(""))
++	    throw new ExcepcionLineaInvalida();
++
++	String[] propiedades = linea.trim().split("\t");
++
++	if (propiedades.length != 4)
++	    throw new ExcepcionLineaInvalida();
++
++	int cta;
++	int edd;
++        double prom;
++	nombre.set(propiedades[0]);
++
++	try {
++            cuenta.set(Integer.valueOf(propiedades[1]));
++            promedio.set(Double.valueOf(propiedades[2]));
++            edad.set(Integer.valueOf(propiedades[3]));
++        } catch (NumberFormatException nfe) {
++            throw new ExcepcionLineaInvalida();
++        }
+     }
+ 
+     /**
+@@ -186,7 +218,44 @@ public class Estudiante implements Registro<Estudiante, CampoEstudiante> {
+      * @throws IllegalArgumentException si el estudiante es <code>null</code>.
+      */
+     public void actualiza(Estudiante estudiante) {
+-        // Aquí va su código.
++        if(estudiante == null)
++	    throw new IllegalArgumentException();
++
++	Estudiante est = estudiante;
++	nombre.set(est.nombre.get());
++	cuenta.set(est.cuenta.get());
++	promedio.set(est.promedio.get());
++	edad.set(est.edad.get());
++    }
++
++    private boolean cazaNombre(Object objeto){
++	if(!(objeto instanceof String))
++	    return false;
++
++	String n = (String)objeto;
++
++	if(n == "")
++	    return false;
++
++	return nombre.get().indexOf(n) != -1;
++    }
++
++    private boolean cazaCuenta(Object objeto){
++	if(!(objeto instanceof Integer)) return false;
++	Integer c = (Integer)objeto;
++	return cuenta.get() >= c.intValue();
++    }
++
++    private boolean cazaEdad(Object objeto){
++	if(!(objeto instanceof Integer)) return false;
++	Integer e = (Integer)objeto;
++	return edad.get() >= e.intValue();
++    }
++
++    private boolean cazaPromedio(Object objeto){
++	if(!(objeto instanceof Double)) return false;
++	Double p = (Double)objeto;
++	return promedio.get() >= p.doubleValue();
+     }
+ 
+     /**
+@@ -215,6 +284,19 @@ public class Estudiante implements Registro<Estudiante, CampoEstudiante> {
+      * @throws IllegalArgumentException si el campo es <code>null</code>.
+      */
+     @Override public boolean caza(CampoEstudiante campo, Object valor) {
+-        // Aquí va su código.
++        if(!(campo instanceof CampoEstudiante)) throw new IllegalArgumentException();
++	CampoEstudiante camp = (CampoEstudiante)campo;
++        switch(camp){
++          case NOMBRE:
++            return cazaNombre(valor);
++          case CUENTA:
++            return cazaCuenta(valor);
++          case EDAD:
++            return cazaEdad(valor);
++          case PROMEDIO:
++            return cazaPromedio(valor);
++          default:
++            return false;
++	}
+     }
+ }
+diff --git a/src/main/java/mx/unam/ciencias/icc/Lista.java b/src/main/java/mx/unam/ciencias/icc/Lista.java
+index 357bc3e..4efd188 100644
+--- a/src/main/java/mx/unam/ciencias/icc/Lista.java
++++ b/src/main/java/mx/unam/ciencias/icc/Lista.java
+@@ -30,7 +30,7 @@ public class Lista<T> implements Iterable<T> {
+ 
+         /* Construye un nodo con un elemento. */
+         private Nodo(T elemento) {
+-            // Aquí va su código.
++            this.elemento = elemento;
+         }
+     }
+ 
+@@ -43,37 +43,51 @@ public class Lista<T> implements Iterable<T> {
+ 
+         /* Construye un nuevo iterador. */
+         private Iterador() {
+-            // Aquí va su código.
++            siguiente = cabeza;
+         }
+ 
+         /* Nos dice si hay un elemento siguiente. */
+         @Override public boolean hasNext() {
+-            // Aquí va su código.
++            return siguiente != null;
+         }
+ 
+         /* Nos da el elemento siguiente. */
+         @Override public T next() {
+-            // Aquí va su código.
++	    if(!hasNext())
++		throw new NoSuchElementException();
++            else{
++		anterior = siguiente;
++		siguiente = siguiente.siguiente;
++		return anterior.elemento;
++	    }
+         }
+ 
+         /* Nos dice si hay un elemento anterior. */
+         @Override public boolean hasPrevious() {
+-            // Aquí va su código.
++            return anterior != null;
+         }
+ 
+         /* Nos da el elemento anterior. */
+         @Override public T previous() {
+-            // Aquí va su código.
++            if(!hasPrevious())
++		throw new NoSuchElementException();
++	    else{
++		siguiente = anterior;
++		anterior = anterior.anterior;
++		return siguiente.elemento;
++	    }
+         }
+ 
+         /* Mueve el iterador al inicio de la lista. */
+         @Override public void start() {
+-            // Aquí va su código.
++            anterior = null;
++	    siguiente = cabeza;
+         }
+ 
+         /* Mueve el iterador al final de la lista. */
+         @Override public void end() {
+-            // Aquí va su código.
++            anterior = rabo;
++	    siguiente = null;
+         }
+     }
+ 
+@@ -89,7 +103,7 @@ public class Lista<T> implements Iterable<T> {
+      * @return la longitud de la lista, el número de elementos que contiene.
+      */
+     public int getLongitud() {
+-        // Aquí va su código.
++        return longitud;
+     }
+ 
+     /**
+@@ -98,7 +112,7 @@ public class Lista<T> implements Iterable<T> {
+      *         otro caso.
+      */
+     public boolean esVacia() {
+-        // Aquí va su código.
++        return longitud == 0;
+     }
+ 
+     /**
+@@ -109,7 +123,18 @@ public class Lista<T> implements Iterable<T> {
+      *         <code>null</code>.
+      */
+     public void agregaFinal(T elemento) {
+-        // Aquí va su código.
++        if(elemento == null)
++	    throw new IllegalArgumentException("Referencia nula");
++	Nodo elmt = new Nodo(elemento);
++	if(esVacia()){
++	    cabeza = rabo = elmt;
++	}
++	else{
++	    elmt.anterior = rabo;
++	    rabo.siguiente = elmt;
++	    rabo = elmt;
++	}
++	longitud++;
+     }
+ 
+     /**
+@@ -120,7 +145,26 @@ public class Lista<T> implements Iterable<T> {
+      *         <code>null</code>.
+      */
+     public void agregaInicio(T elemento) {
+-        // Aquí va su código.
++        if(elemento == null)
++	    throw new IllegalArgumentException();
++	Nodo elmt = new Nodo(elemento);
++	if(esVacia()) cabeza = rabo = elmt;
++	else{
++	    elmt.siguiente = cabeza;
++	    cabeza.anterior = elmt;
++	    cabeza =  elmt;
++	}
++	longitud++;
++    }
++
++    private Nodo buscaNodo(T e){
++	Nodo n = cabeza;
++	if(e == null) return null;
++	while(n != null){
++	    if(n.elemento.equals(e)) return n;
++	    n = n.siguiente;
++	}
++	return null;
+     }
+ 
+     /**
+@@ -139,16 +183,57 @@ public class Lista<T> implements Iterable<T> {
+      *         <code>null</code>.
+      */
+     public void inserta(int i, T elemento) {
+-        // Aquí va su código.
++        if(elemento == null)
++	    throw new IllegalArgumentException();
++	
++	else if(i <= 0)
++	    agregaInicio(elemento);
++	
++        else if(longitud <= i)
++	    agregaFinal(elemento);
++	
++	else{
++	    Nodo nodo = buscaNodo(get(i));
++	    Nodo nuevo = new Nodo(elemento);
++            nodo.anterior.siguiente = nuevo;
++            nuevo.anterior = nodo.anterior;
++            nodo.anterior = nuevo;
++            nuevo.siguiente = nodo;
++            longitud++;
++	}
+     }
+ 
++    private void eliminaNodo(Nodo nodo){
++	if(nodo == null)
++	   return;
++	
++	else if(longitud == 1 && cabeza.elemento.equals(nodo.elemento))
++	    limpia();
++	
++       else if(buscaNodo(nodo.elemento) == null)
++	   return;
++	
++       else if(nodo.equals(rabo))
++	   eliminaUltimo();
++	
++       else if(nodo.equals(cabeza))
++	   eliminaPrimero();
++	
++       else{
++         nodo.anterior.siguiente = nodo.siguiente;
++         nodo.siguiente.anterior = nodo.anterior;
++         longitud--;
++       }
++    }
++    
++
+     /**
+      * Elimina un elemento de la lista. Si el elemento no está contenido en la
+      * lista, el método no la modifica.
+      * @param elemento el elemento a eliminar.
+      */
+     public void elimina(T elemento) {
+-        // Aquí va su código.
++	eliminaNodo(buscaNodo(elemento));
+     }
+ 
+     /**
+@@ -157,7 +242,18 @@ public class Lista<T> implements Iterable<T> {
+      * @throws NoSuchElementException si la lista es vacía.
+      */
+     public T eliminaPrimero() {
+-        // Aquí va su código.
++        if(esVacia())
++	    throw new NoSuchElementException();
++	Nodo elmt = cabeza;
++	if(longitud == 1)
++	    limpia();
++	
++	else{
++	    cabeza = cabeza.siguiente;
++	    cabeza.anterior = null;
++	    longitud--;
++	}
++	return elmt.elemento;
+     }
+ 
+     /**
+@@ -166,7 +262,18 @@ public class Lista<T> implements Iterable<T> {
+      * @throws NoSuchElementException si la lista es vacía.
+      */
+     public T eliminaUltimo() {
+-        // Aquí va su código.
++        if(esVacia())
++	    throw new NoSuchElementException();
++	Nodo elmt = rabo;
++	if(longitud == 1)
++	    limpia();
++	
++	else{
++	    rabo = rabo.anterior;
++	    rabo.siguiente = null;
++	    longitud--;
++	}
++	return elmt.elemento;
+     }
+ 
+     /**
+@@ -176,7 +283,7 @@ public class Lista<T> implements Iterable<T> {
+      *         <code>false</code> en otro caso.
+      */
+     public boolean contiene(T elemento) {
+-        // Aquí va su código.
++        return buscaNodo(elemento) != null;
+     }
+ 
+     /**
+@@ -184,7 +291,16 @@ public class Lista<T> implements Iterable<T> {
+      * @return una nueva lista que es la reversa la que manda llamar el método.
+      */
+     public Lista<T> reversa() {
+-        // Aquí va su código.
++        Nodo elmt = rabo;
++        Lista<T> revList = new Lista<T>();
++	if(esVacia())
++	    return revList;
++	
++	while(elmt != null){
++	    revList.agregaFinal(elmt.elemento);
++	    elmt = elmt.anterior;
++	}
++	return revList;
+     }
+ 
+     /**
+@@ -193,14 +309,24 @@ public class Lista<T> implements Iterable<T> {
+      * @return una copiad de la lista.
+      */
+     public Lista<T> copia() {
+-        // Aquí va su código.
++        Nodo elmt = cabeza;
++	Lista<T> copList = new Lista<T>();
++	if(esVacia())
++	    return copList;
++	
++	while(elmt != null){
++	    copList.agregaFinal(elmt.elemento);
++	    elmt = elmt.siguiente;
++	}
++	return copList;
+     }
+ 
+     /**
+      * Limpia la lista de elementos, dejándola vacía.
+      */
+     public void limpia() {
+-        // Aquí va su código.
++        cabeza = rabo = null;
++	longitud = 0;
+     }
+ 
+     /**
+@@ -209,7 +335,11 @@ public class Lista<T> implements Iterable<T> {
+      * @throws NoSuchElementException si la lista es vacía.
+      */
+     public T getPrimero() {
+-        // Aquí va su código.
++        if(longitud != 0)
++	    return cabeza.elemento;
++	
++        else
++	    throw new NoSuchElementException();
+     }
+ 
+     /**
+@@ -218,7 +348,10 @@ public class Lista<T> implements Iterable<T> {
+      * @throws NoSuchElementException si la lista es vacía.
+      */
+     public T getUltimo() {
+-        // Aquí va su código.
++        if(longitud != 0)
++	    return rabo.elemento;
++        else
++	    throw new NoSuchElementException();
+     }
+ 
+     /**
+@@ -229,7 +362,14 @@ public class Lista<T> implements Iterable<T> {
+      *         igual que el número de elementos en la lista.
+      */
+     public T get(int i) {
+-        // Aquí va su código.
++        if(i < 0 || i >= longitud)
++	    throw new ExcepcionIndiceInvalido();
++	
++	Nodo elmt = cabeza;
++        while(i-- > 0){
++          elmt = elmt.siguiente;
++        }
++        return elmt.elemento;
+     }
+ 
+     /**
+@@ -239,7 +379,16 @@ public class Lista<T> implements Iterable<T> {
+      *         no está contenido en la lista.
+      */
+     public int indiceDe(T elemento) {
+-        // Aquí va su código.
++        Nodo nodo = cabeza;
++        int indice = 0;
++        while( nodo != null){
++	    if(nodo.elemento.equals(elemento))
++		return indice;
++	    
++            nodo = nodo.siguiente;
++            indice++;
++	}
++        return -1;
+     }
+ 
+     /**
+@@ -247,7 +396,15 @@ public class Lista<T> implements Iterable<T> {
+      * @return una representación en cadena de la lista.
+      */
+     @Override public String toString() {
+-        // Aquí va su código.
++        if(esVacia())
++	    return "[]";
++	
++	String repCadena = "[";
++	for (int i = 0; i < longitud-1; i++)
++	    repCadena += String.format("%s, ", get(i));
++
++	repCadena += String.format("%s]", get(longitud-1));
++        return repCadena;
+     }
+ 
+     /**
+@@ -260,7 +417,25 @@ public class Lista<T> implements Iterable<T> {
+         if (objeto == null || getClass() != objeto.getClass())
+             return false;
+         @SuppressWarnings("unchecked") Lista<T> lista = (Lista<T>)objeto;
+-        // Aquí va su código.
++        if(lista == null)
++	    return false;
++	
++        else if(lista.getLongitud() != longitud)
++	    return false;
++	
++        else if(lista.getLongitud() == 0 && longitud == 0)
++	    return true;
++	
++        Nodo nodo = cabeza;
++        int i = 0;
++        while(nodo != null){
++	    if(nodo.elemento.equals(lista.get(i)) == false)
++		return false;
++	    
++            nodo = nodo.siguiente;
++            i++;
++        }
++        return true;
+     }
+ 
+     /**
+@@ -279,6 +454,35 @@ public class Lista<T> implements Iterable<T> {
+         return new Iterador();
+     }
+ 
++    private Lista<T> mezcla(Comparator<T> comparador, Lista<T> d, Lista<T> I){
++	Lista<T> listaOrdenada = new Lista<T>();
++	Nodo nodoD = d.cabeza;
++	Nodo nodoI = I.cabeza;
++	while(nodoD != null && nodoI != null){
++	    if(comparador.compare(nodoI.elemento, nodoD.elemento) < 0){
++		listaOrdenada.agregaFinal(nodoI.elemento);
++		nodoI = nodoI.siguiente;
++	    }
++	    else{
++		listaOrdenada.agregaFinal(nodoD.elemento);
++		nodoD = nodoD.siguiente;
++	    }
++	}
++	if(nodoI == null){
++	    while(nodoD != null){
++		listaOrdenada.agregaFinal(nodoD.elemento);
++		nodoD = nodoD.siguiente;
++	    }
++	}
++	else{
++	    while(nodoI != null){
++		listaOrdenada.agregaFinal(nodoI.elemento);
++		nodoI = nodoI.siguiente;
++	    }
++	}
++	return listaOrdenada;
++    }
++
+     /**
+      * Regresa una copia de la lista, pero ordenada. Para poder hacer el
+      * ordenamiento, el método necesita una instancia de {@link Comparator} para
+@@ -288,7 +492,19 @@ public class Lista<T> implements Iterable<T> {
+      * @return una copia de la lista, pero ordenada.
+      */
+     public Lista<T> mergeSort(Comparator<T> comparador) {
+-        // Aquí va su código.
++        if(this.getLongitud() < 2) return this.copia();
++	Lista<T> listaIzquierda = new Lista<T>();
++	Lista<T> listaDerecha = new Lista<T>();
++	int mitad = this.getLongitud()/2; 
++	int contador = 0;
++	Nodo nodo = this.cabeza;
++	for(T elemento : this){
++	    if(contador < mitad)
++		listaIzquierda.agregaFinal(elemento);
++	    else listaDerecha.agregaFinal(elemento);
++	    contador++;
++	}   
++	return mezcla(comparador, listaIzquierda.mergeSort(comparador), listaDerecha.mergeSort(comparador));
+     }
+ 
+     /**
+@@ -313,7 +529,12 @@ public class Lista<T> implements Iterable<T> {
+      *         <code>false</code> en otro caso.
+      */
+     public boolean busquedaLineal(T elemento, Comparator<T> comparador) {
+-        // Aquí va su código.
++        Nodo n = cabeza;
++        while(n != null){
++            if(comparador.compare(elemento, n.elemento) == 0) return true;
++            n = n.siguiente;
++        }
++        return false;
+     }
+ 
+     /**
+@@ -330,4 +551,5 @@ public class Lista<T> implements Iterable<T> {
+     boolean busquedaLineal(Lista<T> lista, T elemento) {
+         return lista.busquedaLineal(elemento, (a, b) -> a.compareTo(b));
+     }
++
+ }
+diff --git a/src/main/java/mx/unam/ciencias/icc/fx/ControladorFormaEditaEstudiante.java b/src/main/java/mx/unam/ciencias/icc/fx/ControladorFormaEditaEstudiante.java
+index bc06a2d..e9023f3 100644
+--- a/src/main/java/mx/unam/ciencias/icc/fx/ControladorFormaEditaEstudiante.java
++++ b/src/main/java/mx/unam/ciencias/icc/fx/ControladorFormaEditaEstudiante.java
+@@ -116,7 +116,18 @@ public class ControladorFormaEditaEstudiante
+      *         <code>false</code> en otro caso.
+      */
+     @Override protected boolean verificaCuenta(String cuenta) {
+-        // Aquí va su código.
++        if (cuenta == null || cuenta.isEmpty())
++            return false;
++	
++	int c;
++
++	try {
++            c = Integer.parseInt(cuenta);
++        } catch (NumberFormatException nfe) {
++            return false;
++        }
++	
++        return c >= 10000000 && c < 999999999;
+     }
+ 
+     /**
+@@ -126,7 +137,17 @@ public class ControladorFormaEditaEstudiante
+      *         otro caso.
+      */
+     @Override protected boolean verificaPromedio(String promedio) {
+-        // Aquí va su código.
++        if (promedio == null || promedio.isEmpty())
++            return false;
++	
++	double p;
++        try {
++            p = Double.parseDouble(promedio);
++        } catch (NumberFormatException nfe) {
++            return false;
++        }
++	
++        return p >= 0.0 && p <= 10.0;
+     }
+ 
+     /**
+@@ -136,6 +157,16 @@ public class ControladorFormaEditaEstudiante
+      *         otro caso.
+      */
+     @Override protected boolean verificaEdad(String edad) {
+-        // Aquí va su código.
++        if (edad == null || edad.isEmpty())
++            return false;
++
++	int e;
++	
++        try {
++            e = Integer.parseInt(edad);
++        } catch (NumberFormatException nfe) {
++            return false;
++        }
++        return e >= 13 && e <= 99;
+     }
+ }
+diff --git a/src/main/java/mx/unam/ciencias/icc/fx/ControladorFormaEstudiante.java b/src/main/java/mx/unam/ciencias/icc/fx/ControladorFormaEstudiante.java
+index 1ae229b..b5f2ea9 100644
+--- a/src/main/java/mx/unam/ciencias/icc/fx/ControladorFormaEstudiante.java
++++ b/src/main/java/mx/unam/ciencias/icc/fx/ControladorFormaEstudiante.java
+@@ -62,7 +62,7 @@ public abstract class ControladorFormaEstudiante {
+      *         <code>false</code> en otro caso.
+      */
+     public boolean isAceptado() {
+-        // Aquí va su código.
++        return aceptado;
+     }
+ 
+     /**
+@@ -77,7 +77,10 @@ public abstract class ControladorFormaEstudiante {
+      *         otro caso.
+      */
+     protected boolean verificaNombre(String nombre) {
+-        // Aquí va su código.
++        if (nombre == null || nombre.isEmpty())
++            return false;
++
++        return true;
+     }
+ 
+     /**
+@@ -87,7 +90,17 @@ public abstract class ControladorFormaEstudiante {
+      *         <code>false</code> en otro caso.
+      */
+     protected boolean verificaCuenta(String cuenta) {
+-        // Aquí va su código.
++        if (cuenta == null || cuenta.isEmpty())
++            return false;
++
++	int c;
++
++	try {
++            c = Integer.parseInt(cuenta);
++        } catch (NumberFormatException nfe) {
++            return false;
++        }
++        return c >= 10000000 && c < 999999999;
+     }
+ 
+     /**
+@@ -97,7 +110,17 @@ public abstract class ControladorFormaEstudiante {
+      *         otro caso.
+      */
+     protected boolean verificaPromedio(String promedio) {
+-        // Aquí va su código.
++        if (promedio == null || promedio.isEmpty())
++            return false;
++
++	double p;
++	
++	try {
++            p = Double.parseDouble(promedio);
++        } catch (NumberFormatException nfe) {
++            return false;
++        }
++        return p >= 0.0 && p <= 10.0;
+     }
+ 
+     /**
+@@ -107,6 +130,16 @@ public abstract class ControladorFormaEstudiante {
+      *         otro caso.
+      */
+     protected boolean verificaEdad(String edad) {
+-        // Aquí va su código.
++	if (edad == null || edad.isEmpty())
++            return false;
++
++	int e;
++	
++        try {
++            e = Integer.parseInt(edad);
++        } catch (NumberFormatException nfe) {
++            return false;
++        }
++        return e >= 13 && e <= 99;
+     }
+ }
+diff --git a/src/main/java/mx/unam/ciencias/icc/fx/FabricaFormatoCelda.java b/src/main/java/mx/unam/ciencias/icc/fx/FabricaFormatoCelda.java
+index a9ce410..a159bc7 100644
+--- a/src/main/java/mx/unam/ciencias/icc/fx/FabricaFormatoCelda.java
++++ b/src/main/java/mx/unam/ciencias/icc/fx/FabricaFormatoCelda.java
+@@ -26,7 +26,7 @@ public class FabricaFormatoCelda<S, T>
+      * @return el formato de la celda.
+      */
+     public String getFormato() {
+-        // Aquí va su código.
++        return formato;
+     }
+ 
+     /**
+@@ -34,7 +34,7 @@ public class FabricaFormatoCelda<S, T>
+      * @param formato el formato de la celda.
+      */
+     public void setFormato(String formato) {
+-        // Aquí va su código.
++        this.formato = formato;
+     }
+ 
+     /* Regresa el texto correspondiente al elemento. */
