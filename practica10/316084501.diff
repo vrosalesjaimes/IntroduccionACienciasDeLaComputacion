@@ -1,0 +1,2292 @@
+diff --git a/src/main/java/mx/unam/ciencias/icc/Arreglos.java b/src/main/java/mx/unam/ciencias/icc/Arreglos.java
+index cb53134..db3bb5d 100644
+--- a/src/main/java/mx/unam/ciencias/icc/Arreglos.java
++++ b/src/main/java/mx/unam/ciencias/icc/Arreglos.java
+@@ -28,7 +28,15 @@ public class Arreglos {
+      */
+     public static <T> void
+     selectionSort(T[] arreglo, Comparator<T> comparador) {
+-        // Aquí va su código.
++        for(int i = 0; i < arreglo.length; i++){
++	    int m = i;
++	    for(int j = i+1; j < arreglo.length; j++){
++		if(comparador.compare(arreglo[j], arreglo[m]) < 0){
++		    m = j;
++		}
++	    }
++	    intercambia(arreglo, i, m);
++	}
+     }
+ 
+     /**
+@@ -49,7 +57,27 @@ public class Arreglos {
+      */
+     public static <T> void
+     quickSort(T[] arreglo, Comparator<T> comparador) {
+-        // Aquí va su código.
++        QuickSort(arreglo, comparador, 0,  arreglo.length-1);
++    }
++
++    private static <T> void QuickSort(T[] arreglo,Comparator<T> comparador, int a, int b){
++	if(b <= a) return;
++	int i = a + 1;
++	int j = b;
++	while(i < j){
++	    if(comparador.compare(arreglo[i], arreglo[a]) > 0 && comparador.compare(arreglo[j], arreglo[a]) <= 0 ){
++		intercambia(arreglo, i++, j--);
++	    }
++	    else if(comparador.compare(arreglo[i], arreglo[a]) <= 0)
++		i++;
++	    else
++		j--;
++	}
++	if(comparador.compare(arreglo[i], arreglo[a]) > 0)
++	    i--;
++	intercambia(arreglo, i, a);
++	QuickSort(arreglo,comparador, a, i-1);
++	QuickSort(arreglo,comparador, i+1, b);
+     }
+ 
+     /**
+@@ -76,6 +104,19 @@ public class Arreglos {
+      */
+     public static <T> int
+     busquedaBinaria(T[] arreglo, T elemento, Comparator<T> comparador) {
+-        // Aquí va su código.
++        int indice = 0;
++	int longitud = arreglo.length;
++	while(indice < longitud){
++	    if(comparador.compare(arreglo[indice],elemento) == 0) return indice;
++	    indice++;
++	}
++	return -1;
++    }
++
++    private static <T> void intercambia(T[] array,int index_1, int index_2){
++	T elmt_1 = array[index_1];
++	T elmt_2 = array[index_2];
++	array[index_1] = elmt_2;
++	array[index_2] = elmt_1;
+     }
+ }
+diff --git a/src/main/java/mx/unam/ciencias/icc/BaseDeDatos.java b/src/main/java/mx/unam/ciencias/icc/BaseDeDatos.java
+index 0e020cf..1d8f7e2 100644
+--- a/src/main/java/mx/unam/ciencias/icc/BaseDeDatos.java
++++ b/src/main/java/mx/unam/ciencias/icc/BaseDeDatos.java
+@@ -32,7 +32,8 @@ public abstract class BaseDeDatos<R extends Registro<R, C>, C extends Enum> {
+      * Constructor único.
+      */
+     public BaseDeDatos() {
+-        // Aquí va su código.
++        registros = new Lista<R>();
++	escuchas = new Lista<EscuchaBaseDeDatos<R>>();
+     }
+ 
+     /**
+@@ -40,7 +41,7 @@ public abstract class BaseDeDatos<R extends Registro<R, C>, C extends Enum> {
+      * @return el número de registros en la base de datos.
+      */
+     public int getNumRegistros() {
+-        // Aquí va su código.
++	return registros.getLongitud();
+     }
+ 
+     /**
+@@ -49,7 +50,7 @@ public abstract class BaseDeDatos<R extends Registro<R, C>, C extends Enum> {
+      * @return una lista con los registros en la base de datos.
+      */
+     public Lista<R> getRegistros() {
+-        // Aquí va su código.
++        return registros.copia();
+     }
+ 
+     /**
+@@ -59,7 +60,9 @@ public abstract class BaseDeDatos<R extends Registro<R, C>, C extends Enum> {
+      * @param registro el registro que hay que agregar a la base de datos.
+      */
+     public void agregaRegistro(R registro) {
+-        // Aquí va su código.
++        registros.agregaFinal(registro);
++	for(EscuchaBaseDeDatos<R> escucha : this.escuchas)
++	    escucha.baseDeDatosModificada(EventoBaseDeDatos.REGISTRO_AGREGADO, registro, null);
+     }
+ 
+     /**
+@@ -69,7 +72,9 @@ public abstract class BaseDeDatos<R extends Registro<R, C>, C extends Enum> {
+      * @param registro el registro que hay que eliminar de la base de datos.
+      */
+     public void eliminaRegistro(R registro) {
+-        // Aquí va su código.
++        registros.elimina(registro);
++        for(EscuchaBaseDeDatos<R> escucha : this.escuchas)
++            escucha.baseDeDatosModificada(EventoBaseDeDatos.REGISTRO_ELIMINADO, registro, null);
+     }
+ 
+     /**
+@@ -86,7 +91,17 @@ public abstract class BaseDeDatos<R extends Registro<R, C>, C extends Enum> {
+      *         <code>null</code>.
+      */
+     public void modificaRegistro(R registro1, R registro2) {
+-        // Aquí va su código.
++        if(registro1 == null || registro2 == null)
++	    throw new IllegalArgumentException("Alguno de los registros es nulo");
++
++	for(R registro: this.registros){
++	    if(registro.equals(registro1)){
++		for(EscuchaBaseDeDatos<R> escucha : this.escuchas)
++		    escucha.baseDeDatosModificada(EventoBaseDeDatos.REGISTRO_MODIFICADO, registro1, registro2);
++		
++		registro.actualiza(registro2);
++	    }
++        }
+     }
+ 
+     /**
+@@ -95,7 +110,10 @@ public abstract class BaseDeDatos<R extends Registro<R, C>, C extends Enum> {
+      * EventoBaseDeDatos#BASE_LIMPIADA}
+      */
+     public void limpia() {
+-        // Aquí va su código.
++        registros.limpia();
++	
++        for(EscuchaBaseDeDatos<R> escucha : this.escuchas)
++            escucha.baseDeDatosModificada(EventoBaseDeDatos.BASE_LIMPIADA, null, null);
+     }
+ 
+     /**
+@@ -104,7 +122,8 @@ public abstract class BaseDeDatos<R extends Registro<R, C>, C extends Enum> {
+      * @throws IOException si ocurre un error de entrada/salida.
+      */
+     public void guarda(BufferedWriter out) throws IOException {
+-        // Aquí va su código.
++        for(R registro : registros)
++	    out.write(registro.serializa());
+     }
+ 
+     /**
+@@ -119,7 +138,27 @@ public abstract class BaseDeDatos<R extends Registro<R, C>, C extends Enum> {
+      * @throws IOException si ocurre un error de entrada/salida.
+      */
+     public void carga(BufferedReader in) throws IOException {
+-        // Aquí va su código.
++        limpia();
++
++	for(EscuchaBaseDeDatos<R> escucha : escuchas)
++	    escucha.baseDeDatosModificada(EventoBaseDeDatos.BASE_LIMPIADA, null, null);
++
++	String linea;
++
++	while((linea = in.readLine()) != null){
++	    if(linea.trim().equals(""))
++		break;
++	    
++	    R reg = creaRegistro();
++
++	    try {
++                reg.deserializa(linea);
++            } catch (ExcepcionLineaInvalida e) {
++                throw new IOException();
++            }
++
++	    agregaRegistro(reg);
++	}
+     }
+ 
+     /**
+@@ -132,7 +171,14 @@ public abstract class BaseDeDatos<R extends Registro<R, C>, C extends Enum> {
+      *         correcta.
+      */
+     public Lista<R> buscaRegistros(C campo, Object valor) {
+-        // Aquí va su código.
++        Lista<R> lista = new Lista<R>();
++
++	for (R registro : registros) {
++            if (registro.caza(campo, valor))
++                lista.agregaFinal(registro);
++        }
++	
++        return lista;
+     }
+ 
+     /**
+@@ -146,7 +192,7 @@ public abstract class BaseDeDatos<R extends Registro<R, C>, C extends Enum> {
+      * @param escucha el escucha a agregar.
+      */
+     public void agregaEscucha(EscuchaBaseDeDatos<R> escucha) {
+-        // Aquí va su código.
++        escuchas.agregaFinal(escucha);
+     }
+ 
+     /**
+@@ -154,6 +200,6 @@ public abstract class BaseDeDatos<R extends Registro<R, C>, C extends Enum> {
+      * @param escucha el escucha a eliminar.
+      */
+     public void eliminaEscucha(EscuchaBaseDeDatos<R> escucha) {
+-        // Aquí va su código.
++        escuchas.elimina(escucha);
+     }
+ }
+diff --git a/src/main/java/mx/unam/ciencias/icc/BaseDeDatosEstudiantes.java b/src/main/java/mx/unam/ciencias/icc/BaseDeDatosEstudiantes.java
+index 99253e8..dfe35fc 100644
+--- a/src/main/java/mx/unam/ciencias/icc/BaseDeDatosEstudiantes.java
++++ b/src/main/java/mx/unam/ciencias/icc/BaseDeDatosEstudiantes.java
+@@ -11,6 +11,6 @@ public class BaseDeDatosEstudiantes
+      * @return un estudiante en blanco.
+      */
+     @Override public Estudiante creaRegistro() {
+-        // Aquí va su código.
++	return new Estudiante(null, 0,0,0);
+     }
+ }
+diff --git a/src/main/java/mx/unam/ciencias/icc/CampoEstudiante.java b/src/main/java/mx/unam/ciencias/icc/CampoEstudiante.java
+index 4a8740d..214446b 100644
+--- a/src/main/java/mx/unam/ciencias/icc/CampoEstudiante.java
++++ b/src/main/java/mx/unam/ciencias/icc/CampoEstudiante.java
+@@ -20,6 +20,12 @@ public enum CampoEstudiante {
+      * @return una representación en cadena del campo.
+      */
+     @Override public String toString() {
+-        // Aquí va su código.
++        switch(this){
++       	case NOMBRE: return "Nombre";
++	case CUENTA: return "# Cuenta";
++	case PROMEDIO: return "Promedio";
++	case EDAD: return "Edad";
++	default: throw new IllegalArgumentException();
++	}
+     }
+ }
+diff --git a/src/main/java/mx/unam/ciencias/icc/Estudiante.java b/src/main/java/mx/unam/ciencias/icc/Estudiante.java
+index eca27c3..6b2eb6c 100644
+--- a/src/main/java/mx/unam/ciencias/icc/Estudiante.java
++++ b/src/main/java/mx/unam/ciencias/icc/Estudiante.java
+@@ -16,13 +16,13 @@ import javafx.beans.property.StringProperty;
+ public class Estudiante implements Registro<Estudiante, CampoEstudiante> {
+ 
+     /* Nombre del estudiante. */
+-    private final StringProperty nombre;
++    private StringProperty nombre;
+     /* Número de cuenta. */
+-    private final IntegerProperty cuenta;
++    private IntegerProperty cuenta;
+     /* Pormedio del estudiante. */
+-    private final DoubleProperty promedio;
++    private DoubleProperty promedio;
+     /* Edad del estudiante.*/
+-    private final IntegerProperty edad;
++    private IntegerProperty edad;
+ 
+     /**
+      * Define el estado inicial de un estudiante.
+@@ -36,7 +36,9 @@ public class Estudiante implements Registro<Estudiante, CampoEstudiante> {
+                       double promedio,
+                       int    edad) {
+         this.nombre = new SimpleStringProperty(nombre);
+-        // Aquí va su código.
++	this.cuenta   = new SimpleIntegerProperty(cuenta);
++        this.promedio = new SimpleDoubleProperty(promedio);
++        this.edad     = new SimpleIntegerProperty(edad);
+     }
+ 
+     /**
+@@ -68,7 +70,7 @@ public class Estudiante implements Registro<Estudiante, CampoEstudiante> {
+      * @return el número de cuenta del estudiante.
+      */
+     public int getCuenta() {
+-        // Aquí va su código.
++        return cuenta.get();
+     }
+ 
+     /**
+@@ -76,7 +78,7 @@ public class Estudiante implements Registro<Estudiante, CampoEstudiante> {
+      * @param cuenta el nuevo número de cuenta del estudiante.
+      */
+     public void setCuenta(int cuenta) {
+-        // Aquí va su código.
++        this.cuenta.set(cuenta);
+     }
+ 
+     /**
+@@ -84,7 +86,7 @@ public class Estudiante implements Registro<Estudiante, CampoEstudiante> {
+      * @return la propiedad del número de cuenta.
+      */
+     public IntegerProperty cuentaProperty() {
+-        // Aquí va su código.
++        return this.cuenta;
+     }
+ 
+     /**
+@@ -92,7 +94,7 @@ public class Estudiante implements Registro<Estudiante, CampoEstudiante> {
+      * @return el promedio del estudiante.
+      */
+     public double getPromedio() {
+-        // Aquí va su código.
++        return promedio.get();
+     }
+ 
+     /**
+@@ -100,7 +102,7 @@ public class Estudiante implements Registro<Estudiante, CampoEstudiante> {
+      * @param promedio el nuevo promedio del estudiante.
+      */
+     public void setPromedio(double promedio) {
+-        // Aquí va su código.
++        this.promedio.set(promedio);
+     }
+ 
+     /**
+@@ -108,7 +110,7 @@ public class Estudiante implements Registro<Estudiante, CampoEstudiante> {
+      * @return la propiedad del promedio.
+      */
+     public DoubleProperty promedioProperty() {
+-        // Aquí va su código.
++        return this.promedio;
+     }
+ 
+     /**
+@@ -116,7 +118,7 @@ public class Estudiante implements Registro<Estudiante, CampoEstudiante> {
+      * @return la edad del estudiante.
+      */
+     public int getEdad() {
+-        // Aquí va su código.
++        return edad.get();
+     }
+ 
+     /**
+@@ -124,7 +126,7 @@ public class Estudiante implements Registro<Estudiante, CampoEstudiante> {
+      * @param edad la nueva edad del estudiante.
+      */
+     public void setEdad(int edad) {
+-        // Aquí va su código.
++        this.edad.set(edad);
+     }
+ 
+     /**
+@@ -132,7 +134,7 @@ public class Estudiante implements Registro<Estudiante, CampoEstudiante> {
+      * @return la propiedad de la edad.
+      */
+     public IntegerProperty edadProperty() {
+-        // Aquí va su código.
++        return this.edad;
+     }
+ 
+     /**
+@@ -140,7 +142,12 @@ public class Estudiante implements Registro<Estudiante, CampoEstudiante> {
+      * @return una representación en cadena del estudiante.
+      */
+     @Override public String toString() {
+-        // Aquí va su código.
++        return String.format(
++            "Nombre   : %s\n" +
++            "Cuenta   : %09d\n" +
++            "Promedio : %2.2f\n" +
++            "Edad     : %d",
++            nombre.get(), cuenta.get(), promedio.get(), edad.get());
+     }
+ 
+     /**
+@@ -155,7 +162,12 @@ public class Estudiante implements Registro<Estudiante, CampoEstudiante> {
+         if (!(objeto instanceof Estudiante))
+             return false;
+         Estudiante estudiante = (Estudiante)objeto;
+-        // Aquí va su código.
++	if(this.getNombre().equals(estudiante.getNombre()) &&
++	   this.getCuenta() == estudiante.getCuenta() &&
++	   this.getPromedio() == estudiante.getPromedio() &&
++	   this.getEdad() == estudiante.getEdad())
++	       return true;
++	return false;
+     }
+ 
+     /**
+@@ -165,7 +177,8 @@ public class Estudiante implements Registro<Estudiante, CampoEstudiante> {
+      * @return la serialización del estudiante en una línea de texto.
+      */
+     @Override public String serializa() {
+-        // Aquí va su código.
++        return String.format("%s\t%d\t%2.2f\t%d\n",
++			     nombre.get(), cuenta.get(), promedio.get(), edad.get());
+     }
+ 
+     /**
+@@ -177,7 +190,26 @@ public class Estudiante implements Registro<Estudiante, CampoEstudiante> {
+      *         es una serialización válida de un estudiante.
+      */
+     @Override public void deserializa(String linea) {
+-        // Aquí va su código.
++        if (linea == null || linea.equals(""))
++	    throw new ExcepcionLineaInvalida();
++
++	String[] propiedades = linea.trim().split("\t");
++
++	if (propiedades.length != 4)
++	    throw new ExcepcionLineaInvalida();
++
++	int cta;
++	int edd;
++        double prom;
++	nombre.set(propiedades[0]);
++
++	try {
++            cuenta.set(Integer.valueOf(propiedades[1]));
++            promedio.set(Double.valueOf(propiedades[2]));
++            edad.set(Integer.valueOf(propiedades[3]));
++        } catch (NumberFormatException nfe) {
++            throw new ExcepcionLineaInvalida();
++        }
+     }
+ 
+     /**
+@@ -186,7 +218,44 @@ public class Estudiante implements Registro<Estudiante, CampoEstudiante> {
+      * @throws IllegalArgumentException si el estudiante es <code>null</code>.
+      */
+     public void actualiza(Estudiante estudiante) {
+-        // Aquí va su código.
++        if(estudiante == null)
++	    throw new IllegalArgumentException();
++
++	Estudiante est = estudiante;
++	nombre.set(est.nombre.get());
++	cuenta.set(est.cuenta.get());
++	promedio.set(est.promedio.get());
++	edad.set(est.edad.get());
++    }
++
++    private boolean cazaNombre(Object objeto){
++	if(!(objeto instanceof String))
++	    return false;
++
++	String n = (String)objeto;
++
++	if(n == "")
++	    return false;
++
++	return nombre.get().indexOf(n) != -1;
++    }
++
++    private boolean cazaCuenta(Object objeto){
++	if(!(objeto instanceof Integer)) return false;
++	Integer c = (Integer)objeto;
++	return cuenta.get() >= c.intValue();
++    }
++
++    private boolean cazaEdad(Object objeto){
++	if(!(objeto instanceof Integer)) return false;
++	Integer e = (Integer)objeto;
++	return edad.get() >= e.intValue();
++    }
++
++    private boolean cazaPromedio(Object objeto){
++	if(!(objeto instanceof Double)) return false;
++	Double p = (Double)objeto;
++	return promedio.get() >= p.doubleValue();
+     }
+ 
+     /**
+@@ -215,6 +284,19 @@ public class Estudiante implements Registro<Estudiante, CampoEstudiante> {
+      * @throws IllegalArgumentException si el campo es <code>null</code>.
+      */
+     @Override public boolean caza(CampoEstudiante campo, Object valor) {
+-        // Aquí va su código.
++        if(!(campo instanceof CampoEstudiante)) throw new IllegalArgumentException();
++	CampoEstudiante camp = (CampoEstudiante)campo;
++        switch(camp){
++          case NOMBRE:
++            return cazaNombre(valor);
++          case CUENTA:
++            return cazaCuenta(valor);
++          case EDAD:
++            return cazaEdad(valor);
++          case PROMEDIO:
++            return cazaPromedio(valor);
++          default:
++            return false;
++	}
+     }
+ }
+diff --git a/src/main/java/mx/unam/ciencias/icc/Lista.java b/src/main/java/mx/unam/ciencias/icc/Lista.java
+index 357bc3e..4efd188 100644
+--- a/src/main/java/mx/unam/ciencias/icc/Lista.java
++++ b/src/main/java/mx/unam/ciencias/icc/Lista.java
+@@ -30,7 +30,7 @@ public class Lista<T> implements Iterable<T> {
+ 
+         /* Construye un nodo con un elemento. */
+         private Nodo(T elemento) {
+-            // Aquí va su código.
++            this.elemento = elemento;
+         }
+     }
+ 
+@@ -43,37 +43,51 @@ public class Lista<T> implements Iterable<T> {
+ 
+         /* Construye un nuevo iterador. */
+         private Iterador() {
+-            // Aquí va su código.
++            siguiente = cabeza;
+         }
+ 
+         /* Nos dice si hay un elemento siguiente. */
+         @Override public boolean hasNext() {
+-            // Aquí va su código.
++            return siguiente != null;
+         }
+ 
+         /* Nos da el elemento siguiente. */
+         @Override public T next() {
+-            // Aquí va su código.
++	    if(!hasNext())
++		throw new NoSuchElementException();
++            else{
++		anterior = siguiente;
++		siguiente = siguiente.siguiente;
++		return anterior.elemento;
++	    }
+         }
+ 
+         /* Nos dice si hay un elemento anterior. */
+         @Override public boolean hasPrevious() {
+-            // Aquí va su código.
++            return anterior != null;
+         }
+ 
+         /* Nos da el elemento anterior. */
+         @Override public T previous() {
+-            // Aquí va su código.
++            if(!hasPrevious())
++		throw new NoSuchElementException();
++	    else{
++		siguiente = anterior;
++		anterior = anterior.anterior;
++		return siguiente.elemento;
++	    }
+         }
+ 
+         /* Mueve el iterador al inicio de la lista. */
+         @Override public void start() {
+-            // Aquí va su código.
++            anterior = null;
++	    siguiente = cabeza;
+         }
+ 
+         /* Mueve el iterador al final de la lista. */
+         @Override public void end() {
+-            // Aquí va su código.
++            anterior = rabo;
++	    siguiente = null;
+         }
+     }
+ 
+@@ -89,7 +103,7 @@ public class Lista<T> implements Iterable<T> {
+      * @return la longitud de la lista, el número de elementos que contiene.
+      */
+     public int getLongitud() {
+-        // Aquí va su código.
++        return longitud;
+     }
+ 
+     /**
+@@ -98,7 +112,7 @@ public class Lista<T> implements Iterable<T> {
+      *         otro caso.
+      */
+     public boolean esVacia() {
+-        // Aquí va su código.
++        return longitud == 0;
+     }
+ 
+     /**
+@@ -109,7 +123,18 @@ public class Lista<T> implements Iterable<T> {
+      *         <code>null</code>.
+      */
+     public void agregaFinal(T elemento) {
+-        // Aquí va su código.
++        if(elemento == null)
++	    throw new IllegalArgumentException("Referencia nula");
++	Nodo elmt = new Nodo(elemento);
++	if(esVacia()){
++	    cabeza = rabo = elmt;
++	}
++	else{
++	    elmt.anterior = rabo;
++	    rabo.siguiente = elmt;
++	    rabo = elmt;
++	}
++	longitud++;
+     }
+ 
+     /**
+@@ -120,7 +145,26 @@ public class Lista<T> implements Iterable<T> {
+      *         <code>null</code>.
+      */
+     public void agregaInicio(T elemento) {
+-        // Aquí va su código.
++        if(elemento == null)
++	    throw new IllegalArgumentException();
++	Nodo elmt = new Nodo(elemento);
++	if(esVacia()) cabeza = rabo = elmt;
++	else{
++	    elmt.siguiente = cabeza;
++	    cabeza.anterior = elmt;
++	    cabeza =  elmt;
++	}
++	longitud++;
++    }
++
++    private Nodo buscaNodo(T e){
++	Nodo n = cabeza;
++	if(e == null) return null;
++	while(n != null){
++	    if(n.elemento.equals(e)) return n;
++	    n = n.siguiente;
++	}
++	return null;
+     }
+ 
+     /**
+@@ -139,16 +183,57 @@ public class Lista<T> implements Iterable<T> {
+      *         <code>null</code>.
+      */
+     public void inserta(int i, T elemento) {
+-        // Aquí va su código.
++        if(elemento == null)
++	    throw new IllegalArgumentException();
++	
++	else if(i <= 0)
++	    agregaInicio(elemento);
++	
++        else if(longitud <= i)
++	    agregaFinal(elemento);
++	
++	else{
++	    Nodo nodo = buscaNodo(get(i));
++	    Nodo nuevo = new Nodo(elemento);
++            nodo.anterior.siguiente = nuevo;
++            nuevo.anterior = nodo.anterior;
++            nodo.anterior = nuevo;
++            nuevo.siguiente = nodo;
++            longitud++;
++	}
+     }
+ 
++    private void eliminaNodo(Nodo nodo){
++	if(nodo == null)
++	   return;
++	
++	else if(longitud == 1 && cabeza.elemento.equals(nodo.elemento))
++	    limpia();
++	
++       else if(buscaNodo(nodo.elemento) == null)
++	   return;
++	
++       else if(nodo.equals(rabo))
++	   eliminaUltimo();
++	
++       else if(nodo.equals(cabeza))
++	   eliminaPrimero();
++	
++       else{
++         nodo.anterior.siguiente = nodo.siguiente;
++         nodo.siguiente.anterior = nodo.anterior;
++         longitud--;
++       }
++    }
++    
++
+     /**
+      * Elimina un elemento de la lista. Si el elemento no está contenido en la
+      * lista, el método no la modifica.
+      * @param elemento el elemento a eliminar.
+      */
+     public void elimina(T elemento) {
+-        // Aquí va su código.
++	eliminaNodo(buscaNodo(elemento));
+     }
+ 
+     /**
+@@ -157,7 +242,18 @@ public class Lista<T> implements Iterable<T> {
+      * @throws NoSuchElementException si la lista es vacía.
+      */
+     public T eliminaPrimero() {
+-        // Aquí va su código.
++        if(esVacia())
++	    throw new NoSuchElementException();
++	Nodo elmt = cabeza;
++	if(longitud == 1)
++	    limpia();
++	
++	else{
++	    cabeza = cabeza.siguiente;
++	    cabeza.anterior = null;
++	    longitud--;
++	}
++	return elmt.elemento;
+     }
+ 
+     /**
+@@ -166,7 +262,18 @@ public class Lista<T> implements Iterable<T> {
+      * @throws NoSuchElementException si la lista es vacía.
+      */
+     public T eliminaUltimo() {
+-        // Aquí va su código.
++        if(esVacia())
++	    throw new NoSuchElementException();
++	Nodo elmt = rabo;
++	if(longitud == 1)
++	    limpia();
++	
++	else{
++	    rabo = rabo.anterior;
++	    rabo.siguiente = null;
++	    longitud--;
++	}
++	return elmt.elemento;
+     }
+ 
+     /**
+@@ -176,7 +283,7 @@ public class Lista<T> implements Iterable<T> {
+      *         <code>false</code> en otro caso.
+      */
+     public boolean contiene(T elemento) {
+-        // Aquí va su código.
++        return buscaNodo(elemento) != null;
+     }
+ 
+     /**
+@@ -184,7 +291,16 @@ public class Lista<T> implements Iterable<T> {
+      * @return una nueva lista que es la reversa la que manda llamar el método.
+      */
+     public Lista<T> reversa() {
+-        // Aquí va su código.
++        Nodo elmt = rabo;
++        Lista<T> revList = new Lista<T>();
++	if(esVacia())
++	    return revList;
++	
++	while(elmt != null){
++	    revList.agregaFinal(elmt.elemento);
++	    elmt = elmt.anterior;
++	}
++	return revList;
+     }
+ 
+     /**
+@@ -193,14 +309,24 @@ public class Lista<T> implements Iterable<T> {
+      * @return una copiad de la lista.
+      */
+     public Lista<T> copia() {
+-        // Aquí va su código.
++        Nodo elmt = cabeza;
++	Lista<T> copList = new Lista<T>();
++	if(esVacia())
++	    return copList;
++	
++	while(elmt != null){
++	    copList.agregaFinal(elmt.elemento);
++	    elmt = elmt.siguiente;
++	}
++	return copList;
+     }
+ 
+     /**
+      * Limpia la lista de elementos, dejándola vacía.
+      */
+     public void limpia() {
+-        // Aquí va su código.
++        cabeza = rabo = null;
++	longitud = 0;
+     }
+ 
+     /**
+@@ -209,7 +335,11 @@ public class Lista<T> implements Iterable<T> {
+      * @throws NoSuchElementException si la lista es vacía.
+      */
+     public T getPrimero() {
+-        // Aquí va su código.
++        if(longitud != 0)
++	    return cabeza.elemento;
++	
++        else
++	    throw new NoSuchElementException();
+     }
+ 
+     /**
+@@ -218,7 +348,10 @@ public class Lista<T> implements Iterable<T> {
+      * @throws NoSuchElementException si la lista es vacía.
+      */
+     public T getUltimo() {
+-        // Aquí va su código.
++        if(longitud != 0)
++	    return rabo.elemento;
++        else
++	    throw new NoSuchElementException();
+     }
+ 
+     /**
+@@ -229,7 +362,14 @@ public class Lista<T> implements Iterable<T> {
+      *         igual que el número de elementos en la lista.
+      */
+     public T get(int i) {
+-        // Aquí va su código.
++        if(i < 0 || i >= longitud)
++	    throw new ExcepcionIndiceInvalido();
++	
++	Nodo elmt = cabeza;
++        while(i-- > 0){
++          elmt = elmt.siguiente;
++        }
++        return elmt.elemento;
+     }
+ 
+     /**
+@@ -239,7 +379,16 @@ public class Lista<T> implements Iterable<T> {
+      *         no está contenido en la lista.
+      */
+     public int indiceDe(T elemento) {
+-        // Aquí va su código.
++        Nodo nodo = cabeza;
++        int indice = 0;
++        while( nodo != null){
++	    if(nodo.elemento.equals(elemento))
++		return indice;
++	    
++            nodo = nodo.siguiente;
++            indice++;
++	}
++        return -1;
+     }
+ 
+     /**
+@@ -247,7 +396,15 @@ public class Lista<T> implements Iterable<T> {
+      * @return una representación en cadena de la lista.
+      */
+     @Override public String toString() {
+-        // Aquí va su código.
++        if(esVacia())
++	    return "[]";
++	
++	String repCadena = "[";
++	for (int i = 0; i < longitud-1; i++)
++	    repCadena += String.format("%s, ", get(i));
++
++	repCadena += String.format("%s]", get(longitud-1));
++        return repCadena;
+     }
+ 
+     /**
+@@ -260,7 +417,25 @@ public class Lista<T> implements Iterable<T> {
+         if (objeto == null || getClass() != objeto.getClass())
+             return false;
+         @SuppressWarnings("unchecked") Lista<T> lista = (Lista<T>)objeto;
+-        // Aquí va su código.
++        if(lista == null)
++	    return false;
++	
++        else if(lista.getLongitud() != longitud)
++	    return false;
++	
++        else if(lista.getLongitud() == 0 && longitud == 0)
++	    return true;
++	
++        Nodo nodo = cabeza;
++        int i = 0;
++        while(nodo != null){
++	    if(nodo.elemento.equals(lista.get(i)) == false)
++		return false;
++	    
++            nodo = nodo.siguiente;
++            i++;
++        }
++        return true;
+     }
+ 
+     /**
+@@ -279,6 +454,35 @@ public class Lista<T> implements Iterable<T> {
+         return new Iterador();
+     }
+ 
++    private Lista<T> mezcla(Comparator<T> comparador, Lista<T> d, Lista<T> I){
++	Lista<T> listaOrdenada = new Lista<T>();
++	Nodo nodoD = d.cabeza;
++	Nodo nodoI = I.cabeza;
++	while(nodoD != null && nodoI != null){
++	    if(comparador.compare(nodoI.elemento, nodoD.elemento) < 0){
++		listaOrdenada.agregaFinal(nodoI.elemento);
++		nodoI = nodoI.siguiente;
++	    }
++	    else{
++		listaOrdenada.agregaFinal(nodoD.elemento);
++		nodoD = nodoD.siguiente;
++	    }
++	}
++	if(nodoI == null){
++	    while(nodoD != null){
++		listaOrdenada.agregaFinal(nodoD.elemento);
++		nodoD = nodoD.siguiente;
++	    }
++	}
++	else{
++	    while(nodoI != null){
++		listaOrdenada.agregaFinal(nodoI.elemento);
++		nodoI = nodoI.siguiente;
++	    }
++	}
++	return listaOrdenada;
++    }
++
+     /**
+      * Regresa una copia de la lista, pero ordenada. Para poder hacer el
+      * ordenamiento, el método necesita una instancia de {@link Comparator} para
+@@ -288,7 +492,19 @@ public class Lista<T> implements Iterable<T> {
+      * @return una copia de la lista, pero ordenada.
+      */
+     public Lista<T> mergeSort(Comparator<T> comparador) {
+-        // Aquí va su código.
++        if(this.getLongitud() < 2) return this.copia();
++	Lista<T> listaIzquierda = new Lista<T>();
++	Lista<T> listaDerecha = new Lista<T>();
++	int mitad = this.getLongitud()/2; 
++	int contador = 0;
++	Nodo nodo = this.cabeza;
++	for(T elemento : this){
++	    if(contador < mitad)
++		listaIzquierda.agregaFinal(elemento);
++	    else listaDerecha.agregaFinal(elemento);
++	    contador++;
++	}   
++	return mezcla(comparador, listaIzquierda.mergeSort(comparador), listaDerecha.mergeSort(comparador));
+     }
+ 
+     /**
+@@ -313,7 +529,12 @@ public class Lista<T> implements Iterable<T> {
+      *         <code>false</code> en otro caso.
+      */
+     public boolean busquedaLineal(T elemento, Comparator<T> comparador) {
+-        // Aquí va su código.
++        Nodo n = cabeza;
++        while(n != null){
++            if(comparador.compare(elemento, n.elemento) == 0) return true;
++            n = n.siguiente;
++        }
++        return false;
+     }
+ 
+     /**
+@@ -330,4 +551,5 @@ public class Lista<T> implements Iterable<T> {
+     boolean busquedaLineal(Lista<T> lista, T elemento) {
+         return lista.busquedaLineal(elemento, (a, b) -> a.compareTo(b));
+     }
++
+ }
+diff --git a/src/main/java/mx/unam/ciencias/icc/fx/Aplicacion.java b/src/main/java/mx/unam/ciencias/icc/fx/Aplicacion.java
+index adfc91c..dd92f36 100644
+--- a/src/main/java/mx/unam/ciencias/icc/fx/Aplicacion.java
++++ b/src/main/java/mx/unam/ciencias/icc/fx/Aplicacion.java
+@@ -9,7 +9,7 @@ import javafx.scene.layout.GridPane;
+ import javafx.stage.Stage;
+ 
+ /**
+- * Clase para clientes con interfaz gráfica del servidor de la base de datos.
++ * Clase para aplicaciones con interfaz gráfica de la base de datos.
+  */
+ public class Aplicacion extends Application {
+ 
+diff --git a/src/main/java/mx/unam/ciencias/icc/fx/ControladorFormaEditaEstudiante.java b/src/main/java/mx/unam/ciencias/icc/fx/ControladorFormaEditaEstudiante.java
+index d396d36..e9023f3 100644
+--- a/src/main/java/mx/unam/ciencias/icc/fx/ControladorFormaEditaEstudiante.java
++++ b/src/main/java/mx/unam/ciencias/icc/fx/ControladorFormaEditaEstudiante.java
+@@ -47,6 +47,18 @@ public class ControladorFormaEditaEstudiante
+         escenario.close();
+     }
+ 
++    /* Actualiza al estudiante, o lo crea si no existe. */
++    private void actualizaEstudiante() {
++        if (estudiante != null) {
++            estudiante.setNombre(nombre);
++            estudiante.setCuenta(cuenta);
++            estudiante.setPromedio(promedio);
++            estudiante.setEdad(edad);
++        } else {
++            estudiante = new Estudiante(nombre, cuenta, promedio, edad);
++        }
++    }
++
+     /**
+      * Define el estudiante del diálogo.
+      * @param estudiante el nuevo estudiante del diálogo.
+@@ -65,16 +77,27 @@ public class ControladorFormaEditaEstudiante
+         entradaEdad.setText(String.valueOf(estudiante.getEdad()));
+     }
+ 
+-    /* Actualiza al estudiante, o lo crea si no existe. */
+-    private void actualizaEstudiante() {
+-        if (estudiante != null) {
+-            estudiante.setNombre(nombre);
+-            estudiante.setCuenta(cuenta);
+-            estudiante.setPromedio(promedio);
+-            estudiante.setEdad(edad);
+-        } else {
+-            estudiante = new Estudiante(nombre, cuenta, promedio, edad);
+-        }
++    /**
++     * Regresa el estudiante del diálogo.
++     * @return el estudiante del diálogo.
++     */
++    public Estudiante getEstudiante() {
++        return estudiante;
++    }
++
++    /**
++     * Define el verbo del botón de aceptar.
++     * @param verbo el nuevo verbo del botón de aceptar.
++     */
++    public void setVerbo(String verbo) {
++        botonAceptar.setText(verbo);
++    }
++
++    /**
++     * Define el foco incial del diálogo.
++     */
++    @Override public void defineFoco() {
++        entradaNombre.requestFocus();
+     }
+ 
+     /* Verifica que los cuatro campos sean válidos. */
+@@ -93,8 +116,18 @@ public class ControladorFormaEditaEstudiante
+      *         <code>false</code> en otro caso.
+      */
+     @Override protected boolean verificaCuenta(String cuenta) {
+-        return super.verificaCuenta(cuenta) &&
+-            this.cuenta >= 10000000 && this.cuenta < 999999999;
++        if (cuenta == null || cuenta.isEmpty())
++            return false;
++	
++	int c;
++
++	try {
++            c = Integer.parseInt(cuenta);
++        } catch (NumberFormatException nfe) {
++            return false;
++        }
++	
++        return c >= 10000000 && c < 999999999;
+     }
+ 
+     /**
+@@ -104,8 +137,17 @@ public class ControladorFormaEditaEstudiante
+      *         otro caso.
+      */
+     @Override protected boolean verificaPromedio(String promedio) {
+-        return super.verificaPromedio(promedio) &&
+-            this.promedio >= 0.0 && this.promedio <= 10.0;
++        if (promedio == null || promedio.isEmpty())
++            return false;
++	
++	double p;
++        try {
++            p = Double.parseDouble(promedio);
++        } catch (NumberFormatException nfe) {
++            return false;
++        }
++	
++        return p >= 0.0 && p <= 10.0;
+     }
+ 
+     /**
+@@ -115,30 +157,16 @@ public class ControladorFormaEditaEstudiante
+      *         otro caso.
+      */
+     @Override protected boolean verificaEdad(String edad) {
+-        return super.verificaEdad(edad) &&
+-            this.edad >= 13 && this.edad <= 99;
+-    }
+-
+-    /**
+-     * Regresa el estudiante del diálogo.
+-     * @return el estudiante del diálogo.
+-     */
+-    public Estudiante getEstudiante() {
+-        return estudiante;
+-    }
+-
+-    /**
+-     * Define el verbo del botón de aceptar.
+-     * @param verbo el nuevo verbo del botón de aceptar.
+-     */
+-    public void setVerbo(String verbo) {
+-        botonAceptar.setText(verbo);
+-    }
+-
+-    /**
+-     * Define el foco incial del diálogo.
+-     */
+-    @Override public void defineFoco() {
+-        entradaNombre.requestFocus();
++        if (edad == null || edad.isEmpty())
++            return false;
++
++	int e;
++	
++        try {
++            e = Integer.parseInt(edad);
++        } catch (NumberFormatException nfe) {
++            return false;
++        }
++        return e >= 13 && e <= 99;
+     }
+ }
+diff --git a/src/main/java/mx/unam/ciencias/icc/fx/ControladorFormaEstudiante.java b/src/main/java/mx/unam/ciencias/icc/fx/ControladorFormaEstudiante.java
+index 95c1bc1..b5f2ea9 100644
+--- a/src/main/java/mx/unam/ciencias/icc/fx/ControladorFormaEstudiante.java
++++ b/src/main/java/mx/unam/ciencias/icc/fx/ControladorFormaEstudiante.java
+@@ -1,10 +1,28 @@
+ package mx.unam.ciencias.icc.fx;
+ 
++import javafx.collections.ObservableMap;
++import javafx.event.ActionEvent;
++import javafx.fxml.FXML;
++import javafx.scene.Scene;
++import javafx.scene.control.Button;
++import javafx.scene.input.KeyCode;
++import javafx.scene.input.KeyCodeCombination;
++import javafx.scene.input.KeyCombination;
++import javafx.stage.Stage;
++
+ /**
+  * Clase abstracta para controladores del contenido de diálogo con formas con
+  * datos de estudiantes que se aceptan o rechazan.
+  */
+-public abstract class ControladorFormaEstudiante extends ControladorForma {
++public abstract class ControladorFormaEstudiante {
++
++    /** El botón para aceptar. */
++    @FXML protected Button botonAceptar;
++
++    /** La ventana del diálogo. */
++    protected Stage escenario;
++    /** Si el usuario aceptó la forma. */
++    protected boolean aceptado;
+ 
+     /** El valor del nombre. */
+     protected String nombre;
+@@ -15,6 +33,43 @@ public abstract class ControladorFormaEstudiante extends ControladorForma {
+     /** El valor de la edad. */
+     protected int edad;
+ 
++    /**
++     * Define el escenario del diálogo.
++     * @param escenario el nuevo escenario del diálogo.
++     */
++    public void setEscenario(Stage escenario) {
++        this.escenario = escenario;
++        Scene escena = escenario.getScene();
++        KeyCodeCombination combinacion;
++        combinacion = new KeyCodeCombination(KeyCode.ENTER,
++                                             KeyCombination.CONTROL_DOWN);
++        ObservableMap<KeyCombination, Runnable> accs = escena.getAccelerators();
++        accs.put(combinacion, () -> botonAceptar.fire());
++    }
++
++    /**
++     * Manejador para cuando se activa el botón cancelar.
++     * @param evento el evento que generó la acción.
++     */
++    @FXML protected void cancelar(ActionEvent evento) {
++        aceptado = false;
++        escenario.close();
++    }
++
++    /**
++     * Nos dice si el usuario activó el botón de aceptar.
++     * @return <code>true</code> si el usuario activó el botón de aceptar,
++     *         <code>false</code> en otro caso.
++     */
++    public boolean isAceptado() {
++        return aceptado;
++    }
++
++    /**
++     * Define el foco incial del diálogo.
++     */
++    public abstract void defineFoco();
++
+     /**
+      * Verifica que el nombre sea válido.
+      * @param nombre el nombre a verificar.
+@@ -24,7 +79,7 @@ public abstract class ControladorFormaEstudiante extends ControladorForma {
+     protected boolean verificaNombre(String nombre) {
+         if (nombre == null || nombre.isEmpty())
+             return false;
+-        this.nombre = nombre;
++
+         return true;
+     }
+ 
+@@ -37,12 +92,15 @@ public abstract class ControladorFormaEstudiante extends ControladorForma {
+     protected boolean verificaCuenta(String cuenta) {
+         if (cuenta == null || cuenta.isEmpty())
+             return false;
+-        try {
+-            this.cuenta = Integer.parseInt(cuenta);
++
++	int c;
++
++	try {
++            c = Integer.parseInt(cuenta);
+         } catch (NumberFormatException nfe) {
+             return false;
+         }
+-        return true;
++        return c >= 10000000 && c < 999999999;
+     }
+ 
+     /**
+@@ -54,12 +112,15 @@ public abstract class ControladorFormaEstudiante extends ControladorForma {
+     protected boolean verificaPromedio(String promedio) {
+         if (promedio == null || promedio.isEmpty())
+             return false;
+-        try {
+-            this.promedio = Double.parseDouble(promedio);
++
++	double p;
++	
++	try {
++            p = Double.parseDouble(promedio);
+         } catch (NumberFormatException nfe) {
+             return false;
+         }
+-        return true;
++        return p >= 0.0 && p <= 10.0;
+     }
+ 
+     /**
+@@ -69,13 +130,16 @@ public abstract class ControladorFormaEstudiante extends ControladorForma {
+      *         otro caso.
+      */
+     protected boolean verificaEdad(String edad) {
+-        if (edad == null || edad.isEmpty())
++	if (edad == null || edad.isEmpty())
+             return false;
++
++	int e;
++	
+         try {
+-            this.edad = Integer.parseInt(edad);
++            e = Integer.parseInt(edad);
+         } catch (NumberFormatException nfe) {
+             return false;
+         }
+-        return true;
++        return e >= 13 && e <= 99;
+     }
+ }
+diff --git a/src/main/java/mx/unam/ciencias/icc/fx/ControladorInterfazEstudiantes.java b/src/main/java/mx/unam/ciencias/icc/fx/ControladorInterfazEstudiantes.java
+index 7696433..c1121ef 100644
+--- a/src/main/java/mx/unam/ciencias/icc/fx/ControladorInterfazEstudiantes.java
++++ b/src/main/java/mx/unam/ciencias/icc/fx/ControladorInterfazEstudiantes.java
+@@ -1,7 +1,13 @@
+ package mx.unam.ciencias.icc.fx;
+ 
++import java.io.BufferedReader;
++import java.io.BufferedWriter;
++import java.io.File;
++import java.io.FileInputStream;
++import java.io.FileOutputStream;
+ import java.io.IOException;
+-import java.net.Socket;
++import java.io.InputStreamReader;
++import java.io.OutputStreamWriter;
+ import java.util.Optional;
+ import javafx.application.Platform;
+ import javafx.collections.ListChangeListener.Change;
+@@ -24,41 +30,34 @@ import javafx.scene.control.TablePosition;
+ import javafx.scene.control.TableView.TableViewSelectionModel;
+ import javafx.scene.control.TableView;
+ import javafx.scene.layout.AnchorPane;
++import javafx.stage.FileChooser.ExtensionFilter;
++import javafx.stage.FileChooser;
+ import javafx.stage.Modality;
+ import javafx.stage.Stage;
+ import mx.unam.ciencias.icc.BaseDeDatosEstudiantes;
+ import mx.unam.ciencias.icc.Estudiante;
+ import mx.unam.ciencias.icc.EventoBaseDeDatos;
+ import mx.unam.ciencias.icc.Lista;
+-import mx.unam.ciencias.icc.red.Conexion;
+-import mx.unam.ciencias.icc.red.Mensaje;
+ 
+ /**
+  * Clase para el controlador de la ventana principal de la aplicación.
+  */
+ public class ControladorInterfazEstudiantes {
+ 
+-    /* Opción de menu para cambiar el estado de la conexión. */
+-    @FXML private MenuItem menuConexion;
+-    /* Opción de menu para agregar. */
+-    @FXML private MenuItem menuAgregar;
++    /* Opción de menu para guardar. */
++    @FXML private MenuItem menuGuardar;
+     /* Opción de menu para editar. */
+     @FXML private MenuItem menuEditar;
+     /* Opción de menu para eliminar. */
+     @FXML private MenuItem menuEliminar;
+-    /* Opción de menu para buscar. */
+-    @FXML private MenuItem menuBuscar;
+-    /* El botón de agregar. */
+-    @FXML private Button botonAgregar;
++
++    /* La tabla. */
++    @FXML private TableView<Estudiante> tabla;
++
+     /* El botón de editar. */
+     @FXML private Button botonEditar;
+     /* El botón de eliminar. */
+     @FXML private Button botonEliminar;
+-    /* El botón de buscar. */
+-    @FXML private Button botonBuscar;
+-
+-    /* La tabla. */
+-    @FXML private TableView<Estudiante> tabla;
+ 
+     /* La ventana. */
+     private Stage escenario;
+@@ -71,10 +70,10 @@ public class ControladorInterfazEstudiantes {
+ 
+     /* La base de datos. */
+     private BaseDeDatosEstudiantes bdd;
+-    /* La conexión del cliente. */
+-    private Conexion<Estudiante> conexion;
+-    /* Si hay o no conexión. */
+-    private boolean conectado;
++    /* El archivo. */
++    private File archivo;
++    /* Si la operación de guardar fue exitosa. */
++    private boolean guardadoExitoso;
+ 
+     /* Inicializa el controlador. */
+     @FXML private void initialize() {
+@@ -85,17 +84,48 @@ public class ControladorInterfazEstudiantes {
+         ListChangeListener<TablePosition> lcl = c -> cambioSeleccion();
+         seleccion.addListener(lcl);
+         cambioSeleccion();
+-        setConectado(false);
+-        bdd = new BaseDeDatosEstudiantes();
+-        bdd.agregaEscucha((e, r1, r2) -> eventoBaseDeDatos(e, r1, r2));
+     }
+ 
+-    /* Cambioa el estado de la conexión. */
+-    @FXML private void cambiaConexion(ActionEvent evento) {
+-        if (!conectado)
+-            conectar();
++    /* Crea una nueva base de datos. */
++    @FXML private void nuevaBaseDeDatos(ActionEvent evento) {
++        if (!verificaGuardada("¿Desea guardarla antes de crear una nueva?"))
++            return;
++        archivo = null;
++        setBaseDeDatos(new BaseDeDatosEstudiantes());
++    }
++
++    /* Carga una base de datos. */
++    @FXML private void cargaBaseDeDatos(ActionEvent evento) {
++        if (!verificaGuardada("¿Desea guardarla antes de cargar otra?"))
++            return;
++        FileChooser fc = new FileChooser();
++        fc.setTitle("Cargar Base de Datos");
++        fc.getExtensionFilters().addAll(
++            new ExtensionFilter("Bases de datos", "*.bd"),
++            new ExtensionFilter("Todos los archivos", "*.*"));
++        File archivo = fc.showOpenDialog(escenario);
++        if (archivo != null)
++            cargaBaseDeDatosDeArchivo(archivo);
++    }
++
++    /* Guarda la base de datos. */
++    @FXML private void guardaBaseDeDatos(ActionEvent evento) {
++        if (archivo == null)
++            guardaBaseDeDatosComo(evento);
+         else
+-            desconectar();
++            guardaBaseDeDatosEnArchivo();
++    }
++
++    /* Guarda la base de datos con un nombre distinto. */
++    @FXML private void guardaBaseDeDatosComo(ActionEvent evento) {
++        FileChooser fc = new FileChooser();
++        fc.setTitle("Guardar Base de Datos como...");
++        fc.getExtensionFilters().addAll(
++            new ExtensionFilter("Bases de datos", "*.bd"),
++            new ExtensionFilter("Todos los archivos", "*.*"));
++        archivo = fc.showSaveDialog(escenario);
++        if (archivo != null)
++            guardaBaseDeDatosEnArchivo();
+     }
+ 
+     /**
+@@ -103,7 +133,10 @@ public class ControladorInterfazEstudiantes {
+      * @param evento el evento que generó la acción.
+      */
+     @FXML public void salir(Event evento) {
+-        desconectar();
++        if (!verificaGuardada("¿Desea guardarla antes de salir?")) {
++            evento.consume();
++            return;
++        }
+         Platform.exit();
+     }
+ 
+@@ -123,13 +156,6 @@ public class ControladorInterfazEstudiantes {
+         if (!dialogo.isAceptado())
+             return;
+         bdd.agregaRegistro(dialogo.getEstudiante());
+-        try {
+-            conexion.enviaMensaje(Mensaje.REGISTRO_AGREGADO);
+-            conexion.enviaRegistro(dialogo.getEstudiante());
+-        } catch (IOException ioe) {
+-            dialogoError("Error con el servidor",
+-                         "No se pudo enviar un estudiante a agregar.");
+-        }
+     }
+ 
+     /* Edita un estudiante. */
+@@ -148,14 +174,6 @@ public class ControladorInterfazEstudiantes {
+         tabla.requestFocus();
+         if (!dialogo.isAceptado())
+             return;
+-        try {
+-            conexion.enviaMensaje(Mensaje.REGISTRO_MODIFICADO);
+-            conexion.enviaRegistro(estudiante);
+-            conexion.enviaRegistro(dialogo.getEstudiante());
+-        } catch (IOException ioe) {
+-            dialogoError("Error con el servidor",
+-                         "No se pudieron enviar estudiantes a modificar.");
+-        }
+         bdd.modificaRegistro(estudiante, dialogo.getEstudiante());
+     }
+ 
+@@ -173,18 +191,8 @@ public class ControladorInterfazEstudiantes {
+         if (!dialogoDeConfirmacion(titulo, mensaje, "¿Está seguro?",
+                                    aceptar, cancelar))
+             return;
+-        for (TablePosition tp : seleccion) {
+-            Estudiante estudiante = renglones.get(tp.getRow());
+-            bdd.eliminaRegistro(estudiante);
+-            try {
+-                conexion.enviaMensaje(Mensaje.REGISTRO_ELIMINADO);
+-                conexion.enviaRegistro(estudiante);
+-            } catch (IOException ioe) {
+-                dialogoError("Error con el servidor",
+-                             "No se pudo enviar un estudiante a eliminar.");
+-                return;
+-            }
+-        }
++        for (TablePosition tp : seleccion)
++            bdd.eliminaRegistro(renglones.get(tp.getRow()));
+     }
+ 
+     /* Busca estudiantes. */
+@@ -232,63 +240,86 @@ public class ControladorInterfazEstudiantes {
+      */
+     public void setEscenario(Stage escenario) {
+         this.escenario = escenario;
++        setBaseDeDatos(new BaseDeDatosEstudiantes());
+     }
+ 
+-    /* Conecta el cliente con el servidor. */
+-    private void conectar() {
+-        DialogoConectar dialogo;
++    /* Carga la base de datos de un archivo. */
++    private void cargaBaseDeDatosDeArchivo(File archivo) {
++        BaseDeDatosEstudiantes nbdd = new BaseDeDatosEstudiantes();
+         try {
+-            dialogo = new DialogoConectar(escenario);
+-        } catch (IOException | IllegalStateException e) {
+-            String mensaje = ("Ocurrió un error al tratar de " +
+-                              "cargar el diálogo de conexión.");
+-            dialogoError("Error al cargar interfaz", mensaje);
+-            return;
++            BufferedReader in =
++                new BufferedReader(
++                    new InputStreamReader(
++                        new FileInputStream(archivo)));
++            nbdd.carga(in);
++            in.close();
++            this.archivo = archivo;
++            setBaseDeDatos(nbdd);
++        } catch (IOException ioe) {
++            String mensaje =
++                String.format("Ocurrió un error al tratar de " +
++                              "cargar la base de datos en '%s'.",
++                              archivo.getName());
++            dialogoError("Error al cargar base de datos", mensaje);
+         }
+-        dialogo.showAndWait();
+-        tabla.requestFocus();
+-        if (!dialogo.isAceptado())
+-            return;
+-        String direccion = dialogo.getDireccion();
+-        int puerto = dialogo.getPuerto();
++    }
++
++    /* Guarda la base de datos en un archivo. */
++    private void guardaBaseDeDatosEnArchivo() {
+         try {
+-            Socket enchufe = new Socket(direccion, puerto);
+-            conexion = new Conexion<Estudiante>(bdd, enchufe);
+-            new Thread(() -> conexion.recibeMensajes()).start();
+-            conexion.agregaEscucha((c, m) -> mensajeRecibido(c, m));
+-            conexion.enviaMensaje(Mensaje.BASE_DE_DATOS);
++            BufferedWriter out =
++                new BufferedWriter(
++                    new OutputStreamWriter(
++                        new FileOutputStream(archivo)));
++            bdd.guarda(out);
++            out.close();
++            setModificada(false);
++            guardadoExitoso = true;
+         } catch (IOException ioe) {
+-            conexion = null;
+             String mensaje =
+                 String.format("Ocurrió un error al tratar de " +
+-                              "conectarnos a %s:%d.\n", direccion, puerto);
+-            dialogoError("Error al establecer conexión", mensaje);
+-            return;
++                              "guardar la base de datos en '%s'.",
++                              archivo.getPath());
++            dialogoError("Error al guardar base de datos", mensaje);
++            archivo = null;
++            guardadoExitoso = false;
+         }
+-        setConectado(true);
+     }
+ 
+-    /* Desconecta el cliente del servidor. */
+-    private void desconectar() {
+-        if (!conectado)
+-            return;
+-        setConectado(false);
+-        conexion.desconecta();
+-        conexion = null;
+-        bdd.limpia();
++    /* Si la base de datos ha sido modificada, muestra un diálogo preguntando al
++     * usuario si quiere guardarla. */
++    private boolean verificaGuardada(String pregunta) {
++        guardadoExitoso = true;
++        if (!menuGuardar.isDisable()) {
++            if (dialogoDeConfirmacion("Base de datos modificada",
++                                      "La base de datos ha sido modificada.",
++                                      pregunta,
++                                      "Guardar cambios", "Ignorar cambios"))
++                guardaBaseDeDatos(null);
++        }
++        return guardadoExitoso;
+     }
+ 
+-    /* Cambia la interfaz gráfica dependiendo si estamos o no conectados. */
+-    private void setConectado(boolean conectado) {
+-        this.conectado = conectado;
+-        if (conectado)
+-            menuConexion.setText("Desconectar");
+-        else
+-            menuConexion.setText("Conectar...");
+-        menuAgregar.setDisable(!conectado);
+-        menuBuscar.setDisable(!conectado);
+-        botonAgregar.setDisable(!conectado);
+-        botonBuscar.setDisable(!conectado);
++    /* Actualiza la interfaz con una nueva base de datos. */
++    private void setBaseDeDatos(BaseDeDatosEstudiantes bdd) {
++        if (this.bdd != null)
++            this.bdd.limpia();
++        this.bdd = bdd;
++        for (Estudiante estudiante : bdd.getRegistros())
++            renglones.add(estudiante);
++        tabla.sort();
++        bdd.agregaEscucha((e, r1, r2) -> eventoBaseDeDatos(e, r1, r2));
++        setModificada(false);
++    }
++
++    /* Actualiza la interfaz para mostrar que el archivo ha sido modificado. */
++    private void setModificada(boolean modificado) {
++        menuGuardar.setDisable(!modificado);
++        String a = (archivo != null) ? archivo.getName() : "<Nuevo>";
++        String t = "Administrador de Estudiantes: " + a;
++        if (modificado)
++            t += "*";
++        escenario.setTitle(t);
+     }
+ 
+     /* Maneja un evento de cambio en la base de datos. */
+@@ -297,15 +328,20 @@ public class ControladorInterfazEstudiantes {
+                                    Estudiante estudiante2) {
+         switch (evento) {
+         case BASE_LIMPIADA:
+-            Platform.runLater(() -> renglones.clear());
++            renglones.clear();
+             break;
+         case REGISTRO_AGREGADO:
+-            Platform.runLater(() -> agregaEstudiante(estudiante1));
++            renglones.add(estudiante1);
++            setModificada(true);
++            tabla.sort();
+             break;
+         case REGISTRO_ELIMINADO:
+-            Platform.runLater(() -> eliminaEstudiante(estudiante1));
++            renglones.remove(estudiante1);
++            setModificada(true);
++            tabla.sort();
+             break;
+         case REGISTRO_MODIFICADO:
++            setModificada(true);
+             Platform.runLater(() -> tabla.sort());
+             break;
+         }
+@@ -339,105 +375,13 @@ public class ControladorInterfazEstudiantes {
+         return resultado.get() == si;
+     }
+ 
+-    /* Recibe los mensajes de la conexión. */
+-    private void mensajeRecibido(Conexion<Estudiante> conexion, Mensaje mensaje) {
+-        switch (mensaje) {
+-        case BASE_DE_DATOS:
+-            baseDeDatos(conexion);
+-            break;
+-        case REGISTRO_AGREGADO:
+-            registroAlterado(conexion, mensaje);
+-            break;
+-        case REGISTRO_ELIMINADO:
+-            registroAlterado(conexion, mensaje);
+-            break;
+-        case REGISTRO_MODIFICADO:
+-            registroModificado(conexion);
+-            break;
+-        case DESCONECTAR:
+-            Platform.runLater(() -> desconectar());
+-            break;
+-        case DETENER_SERVICIO:
+-            // Se ignora.
+-            break;
+-        case ECO:
+-            // Se ignora.
+-            break;
+-        case INVALIDO:
+-            Platform.runLater(() -> dialogoError("Error con el servidor",
+-                                                 "Mensaje inválido recibido. " +
+-                                                 "Se finalizará la conexión."));
+-            break;
+-        }
+-    }
+-
+-    /* Maneja el mensaje BASE_DE_DATOS. */
+-    private void baseDeDatos(Conexion<Estudiante> conexion) {
+-        try {
+-            conexion.recibeBaseDeDatos();
+-        } catch (IOException ioe) {
+-            String m = "No se pudo recibir la base de datos. " +
+-                "Se finalizará la conexión.";
+-            Platform.runLater(() -> dialogoError("Error con el servidor", m));
+-            return;
+-        }
+-    }
+-
+-    /* Maneja los mensajes REGISTRO_AGREGADO y REGISTRO_MODIFICADO. */
+-    private void registroAlterado(Conexion<Estudiante> conexion,
+-                                  Mensaje mensaje) {
+-        Estudiante e;
+-        try {
+-            e = conexion.recibeRegistro();
+-        } catch (IOException ioe) {
+-            String m = "No se pudo recibir un registro. " +
+-                "Se finalizará la conexión.";
+-            Platform.runLater(() -> dialogoError("Error con el servidor", m));
+-            return;
+-        }
+-        if (mensaje == Mensaje.REGISTRO_AGREGADO)
+-            bdd.agregaRegistro(e);
+-        else
+-            bdd.eliminaRegistro(e);
+-    }
+-
+-    /* Maneja el mensaje REGISTRO_MODIFICADO. */
+-    private void registroModificado(Conexion<Estudiante> conexion) {
+-        Estudiante e1, e2;
+-        try {
+-            e1 = conexion.recibeRegistro();
+-            e2 = conexion.recibeRegistro();
+-        } catch (IOException ioe) {
+-            String m = "No se pudieron recibir registros." +
+-                "Se finalizará la conexión.";
+-            Platform.runLater(() -> dialogoError("Error con el servidor", m));
+-            return;
+-        }
+-        bdd.modificaRegistro(e1, e2);
+-    }
+-
+     /* Muestra un diálogo de error. */
+     private void dialogoError(String titulo, String mensaje) {
+-        if (conectado)
+-            desconectar();
+         Alert dialogo = new Alert(AlertType.ERROR);
+         dialogo.setTitle(titulo);
+         dialogo.setHeaderText(null);
+         dialogo.setContentText(mensaje);
+-        dialogo.setOnCloseRequest(e -> renglones.clear());
+         dialogo.showAndWait();
+         tabla.requestFocus();
+     }
+-
+-    /* Agrega un estudiante a la tabla. */
+-    private void agregaEstudiante(Estudiante estudiante) {
+-        renglones.add(estudiante);
+-        tabla.sort();
+-    }
+-
+-    /* Elimina un estudiante de la tabla. */
+-    private void eliminaEstudiante(Estudiante estudiante) {
+-        renglones.remove(estudiante);
+-        tabla.sort();
+-    }
+ }
+diff --git a/src/main/java/mx/unam/ciencias/icc/fx/EntradaVerificable.java b/src/main/java/mx/unam/ciencias/icc/fx/EntradaVerificable.java
+index 9f8118d..01d4d44 100644
+--- a/src/main/java/mx/unam/ciencias/icc/fx/EntradaVerificable.java
++++ b/src/main/java/mx/unam/ciencias/icc/fx/EntradaVerificable.java
+@@ -22,7 +22,7 @@ public class EntradaVerificable extends TextField {
+      * @param verificador el nuevo verificador de la entrada.
+      */
+     public void setVerificador(Verificador verificador) {
+-        this.verificador = verificador;
++        // Aquí va su código.
+     }
+ 
+     /**
+diff --git a/src/main/java/mx/unam/ciencias/icc/red/Conexion.java b/src/main/java/mx/unam/ciencias/icc/red/Conexion.java
+index 996e111..457f6b0 100644
+--- a/src/main/java/mx/unam/ciencias/icc/red/Conexion.java
++++ b/src/main/java/mx/unam/ciencias/icc/red/Conexion.java
+@@ -46,7 +46,16 @@ public class Conexion<R extends Registro<R, ?>> {
+      * @throws IOException si ocurre un error de entrada o salida.
+      */
+     public Conexion(BaseDeDatos<R, ?> bdd, Socket enchufe) throws IOException {
+-        // Aquí va su código.
++        this.in = new BufferedReader(
++		      new InputStreamReader(enchufe.getInputStream()));
++	
++        this.out = new BufferedWriter(
++		       new OutputStreamWriter(enchufe.getOutputStream()));
++        this.bdd = bdd;
++        this.escuchas = new Lista<EscuchaConexion<R>>();
++        this.enchufe = enchufe;
++        this.activa = true;
++        this.serie = ++contadorSerie;
+     }
+ 
+     /**
+@@ -55,7 +64,21 @@ public class Conexion<R extends Registro<R, ?>> {
+      * que lea en mensajes y reportará cada uno a los escuchas.
+      */
+     public void recibeMensajes() {
+-        // Aquí va su código.
++        try {
++            String linea;
++
++	    while((linea = in.readLine()) != null) {
++                Mensaje mensaje = Mensaje.getMensaje(linea);
++                notificaEscuchas(mensaje);
++            }
++	    
++            activa = false;
++        } catch (IOException ioe) {
++	    if (activa)
++                notificaEscuchas(Mensaje.INVALIDO);
++        }
++	
++        notificaEscuchas(Mensaje.DESCONECTAR);
+     }
+ 
+     /**
+@@ -63,7 +86,7 @@ public class Conexion<R extends Registro<R, ?>> {
+      * @throws IOException si la base de datos no puede recibirse.
+      */
+     public void recibeBaseDeDatos() throws IOException {
+-        // Aquí va su código.
++        bdd.carga(in);
+     }
+ 
+     /**
+@@ -71,7 +94,9 @@ public class Conexion<R extends Registro<R, ?>> {
+      * @throws IOException si la base de datos no puede enviarse.
+      */
+     public void enviaBaseDeDatos() throws IOException {
+-        // Aquí va su código.
++        bdd.guarda(out);
++        out.newLine();
++        out.flush();
+     }
+ 
+     /**
+@@ -80,7 +105,16 @@ public class Conexion<R extends Registro<R, ?>> {
+      * @throws IOException si el registro no puede recibirse.
+      */
+     public R recibeRegistro() throws IOException {
+-        // Aquí va su código.
++        String linea = in.readLine();
++        R registro = bdd.creaRegistro();
++	
++        try {
++            registro.deserializa(linea);
++        } catch (ExcepcionLineaInvalida e) {
++            throw new IOException("Se recibió línea inválida.");
++        }
++	
++        return registro;
+     }
+ 
+     /**
+@@ -89,7 +123,8 @@ public class Conexion<R extends Registro<R, ?>> {
+      * @throws IOException si el registro no puede enviarse.
+      */
+     public void enviaRegistro(R registro) throws IOException {
+-        // Aquí va su código.
++        out.write(registro.serializa());
++        out.flush();
+     }
+ 
+     /**
+@@ -98,7 +133,9 @@ public class Conexion<R extends Registro<R, ?>> {
+      * @throws IOException si el mensaje no puede enviarse.
+      */
+     public void enviaMensaje(Mensaje mensaje) throws IOException {
+-        // Aquí va su código.
++        out.write(mensaje.toString());
++        out.newLine();
++        out.flush();
+     }
+ 
+     /**
+@@ -106,14 +143,18 @@ public class Conexion<R extends Registro<R, ?>> {
+      * @return un número de serie para cada conexión.
+      */
+     public int getSerie() {
+-        // Aquí va su código.
++        return serie;
+     }
+ 
+     /**
+      * Cierra la conexión.
+      */
+     public void desconecta() {
+-        // Aquí va su código.
++        activa = false;
++        try {
++            enchufe.close();
++        } catch (IOException ioe) {
++        }
+     }
+ 
+     /**
+@@ -122,7 +163,7 @@ public class Conexion<R extends Registro<R, ?>> {
+      *         otro caso.
+      */
+     public boolean isActiva() {
+-        // Aquí va su código.
++        return activa;
+     }
+ 
+     /**
+@@ -130,6 +171,11 @@ public class Conexion<R extends Registro<R, ?>> {
+      * @param escucha el escucha a agregar.
+      */
+     public void agregaEscucha(EscuchaConexion<R> escucha) {
+-        // Aquí va su código.
++	escuchas.agregaFinal(escucha);
++    }
++
++    private void notificaEscuchas(Mensaje mensaje) {
++        for (EscuchaConexion<R> escucha : escuchas)
++            escucha.mensajeRecibido(this, mensaje);
+     }
+ }
+diff --git a/src/main/java/mx/unam/ciencias/icc/red/Mensaje.java b/src/main/java/mx/unam/ciencias/icc/red/Mensaje.java
+index edcba8c..518fac3 100644
+--- a/src/main/java/mx/unam/ciencias/icc/red/Mensaje.java
++++ b/src/main/java/mx/unam/ciencias/icc/red/Mensaje.java
+@@ -75,7 +75,23 @@ public enum Mensaje {
+      * @return el mensaje correspondiente a la línea.
+      */
+     public static Mensaje getMensaje(String mensaje) {
+-        // Aquí va su código.
++        if (!mensaje.startsWith(PREFIJO))
++            return INVALIDO;
++
++        String msg = mensaje.replace(PREFIJO, "");
++
++        switch (msg) {
++            case "BASE_DE_DATOS":       return BASE_DE_DATOS;
++            case "REGISTRO_AGREGADO":   return REGISTRO_AGREGADO;
++            case "REGISTRO_ELIMINADO":  return REGISTRO_ELIMINADO;
++            case "REGISTRO_MODIFICADO": return REGISTRO_MODIFICADO;
++            case "DESCONECTAR":         return DESCONECTAR;
++	    case "GUARDA":              return GUARDA;
++            case "DETENER_SERVICIO":    return DETENER_SERVICIO;
++            case "ECO":                 return ECO;
++            case "INVALIDO":
++            default:                    return INVALIDO;
++        }
+     }
+ 
+     /**
+@@ -83,6 +99,17 @@ public enum Mensaje {
+      * @return la cadena con el mensaje correspondiente al mensaje.
+      */
+     @Override public String toString() {
+-        // Aquí va su código.
++        switch (this) {
++            case BASE_DE_DATOS:       return PREFIJO + "BASE_DE_DATOS";
++            case REGISTRO_AGREGADO:   return PREFIJO + "REGISTRO_AGREGADO";
++            case REGISTRO_ELIMINADO:  return PREFIJO + "REGISTRO_ELIMINADO";
++            case REGISTRO_MODIFICADO: return PREFIJO + "REGISTRO_MODIFICADO";
++            case DESCONECTAR:         return PREFIJO + "DESCONECTAR";
++	    case GUARDA:              return PREFIJO + "GUARDA";
++            case DETENER_SERVICIO:    return PREFIJO + "DETENER_SERVICIO";
++            case ECO:                 return PREFIJO + "ECO";
++            case INVALIDO:
++            default:                  return PREFIJO + "INVALIDO";
++        }
+     }
+ }
+diff --git a/src/main/java/mx/unam/ciencias/icc/red/ServidorBaseDeDatos.java b/src/main/java/mx/unam/ciencias/icc/red/ServidorBaseDeDatos.java
+index 48d5870..829bca2 100644
+--- a/src/main/java/mx/unam/ciencias/icc/red/ServidorBaseDeDatos.java
++++ b/src/main/java/mx/unam/ciencias/icc/red/ServidorBaseDeDatos.java
+@@ -46,14 +46,46 @@ public abstract class ServidorBaseDeDatos<R extends Registro<R, ?>> {
+      */
+     public ServidorBaseDeDatos(int puerto, String ruta)
+         throws IOException {
+-        // Aquí va su código.
++        this.bdd = creaBaseDeDatos();
++        this.servidor = new ServerSocket(puerto);
++        this.puerto = puerto;
++	
++	if(ruta == null)
++	    this.ruta = "base-de-datos.bd";
++	else
++	    this.ruta = ruta;
++
++	this.conexiones = new Lista<Conexion<R>>();
++        this.continuaEjecucion = true;
++        this.escuchas = new Lista<EscuchaServidor>();
++
++        leeBaseDeDatos(this.ruta);
+     }
+ 
+     /**
+      * Comienza a escuchar por conexiones de clientes.
+      */
+     public void sirve() {
+-        // Aquí va su código.
++        while (continuaEjecucion) {
++            try {
++                Socket socket = servidor.accept();
++                Conexion<R> conexion = new Conexion<R>(bdd, socket);
++
++                notificaEscuchas("Conexión recibida de: %s.",socket.getInetAddress().getCanonicalHostName());
++		
++                notificaEscuchas("Serie de conexión: %d.",conexion.getSerie());
++
++                conexion.agregaEscucha((con, men) -> procesaNuevoMensaje(con, men));
++
++                synchronized (conexiones) {
++                    conexiones.agregaFinal(conexion);
++                }
++
++                new Thread(() -> conexion.recibeMensajes()).start();
++            } catch (IOException ioe) {
++                notificaEscuchas("Error al aceptar conexión.");
++            }
++        }
+     }
+ 
+     /**
+@@ -61,16 +93,264 @@ public abstract class ServidorBaseDeDatos<R extends Registro<R, ?>> {
+      * @param escucha el escucha a agregar.
+      */
+     public void agregaEscucha(EscuchaServidor escucha) {
+-        // Aquí va su código.
++        escuchas.agregaFinal(escucha);
+     }
+ 
+     /**
+      * Limpia todos los escuchas del servidor.
+      */
+     public void limpiaEscuchas() {
+-        // Aquí va su código.
++        escuchas.limpia();
++    }
++
++    /**
++     * Agrega a la base de datos los registros guardados en el archivo.
++     * @param archivo el archivo de donde leer los registros.
++     */
++    private void leeBaseDeDatos(String archivo) {
++        try {
++            BufferedReader in = new BufferedReader(
++                                    new InputStreamReader(
++                                        new FileInputStream(archivo)));
++            bdd.carga(in);
++            in.close();
++        } catch (IOException ioe) {
++            notificaEscuchas("Error al leer la base de datos de %s.", ruta);
++        }
++    }
++
++    /**
++     * Guarda la base de datos al disco duro, en el debido archivo.
++     */
++    private void escribeBaseDeDatos() {
++        notificaEscuchas("Guardando base de datos en %s.", ruta);
++
++        try {
++            BufferedWriter out = new BufferedWriter(
++                                    new OutputStreamWriter(
++                                        new FileOutputStream(ruta)));
++            bdd.guarda(out);
++            out.close();
++        } catch (IOException ioe) {
++            notificaEscuchas("Error al guardar la base de datos en %s.",
++                    ruta);
++        }
++
++        notificaEscuchas("Base de datos guardada.");
++    }
++
++    /**
++     * Si la conexión se encuentra activa, procesa el mensaje recibido.
++     * @param conexion la conexión que realizó una solicitud.
++     * @param mensaje el mensaje que se recibió.
++     */
++    private void procesaNuevoMensaje(Conexion<R> conexion, Mensaje mensaje) {
++        if (conexion.isActiva())
++            switch (mensaje) {
++                case BASE_DE_DATOS:
++                    procesaBaseDeDatos(conexion);
++                    break;
++                case REGISTRO_AGREGADO:
++                    procesaRegistroAgregado(conexion);
++                    break;
++                case REGISTRO_ELIMINADO:
++                    procesaRegistroEliminado(conexion);
++                    break;
++                case REGISTRO_MODIFICADO:
++                    procesaRegistroModificado(conexion);
++                    break;
++                case DESCONECTAR:
++                    procesaDesconectar(conexion);
++                    break;
++                case DETENER_SERVICIO:
++                    procesaDetenerServicio();
++                    break;
++                case ECO:
++                    procesaEco(conexion);
++                    break;
++                case INVALIDO:
++                    procesaInvalido(conexion);
++                    break;
++            }
++    }
++
++    /**
++     * Procesa la solicitud de la base de datos, enviando la base de datos a
++     * través de la conexión.
++     * @param conexion la conexión que realizó la solicitud.
++     */
++    private void procesaBaseDeDatos(Conexion<R> conexion) {
++        notificaEscuchas("Base de datos pedida por %d.", conexion.getSerie());
++
++        try {
++            conexion.enviaMensaje(Mensaje.BASE_DE_DATOS);
++            conexion.enviaBaseDeDatos();
++        } catch (IOException ioe) {
++            notificaEscuchas("Error al enviar la base de datos a la conexión %d.",
++                    conexion.getSerie());
++        }
++    }
++
++    /**
++     * Procesa la solicitud de agregar registro, agregando al registro a la
++     * base de datos, y notificando a todas las conexiones del cambio.
++     * Los cambios se deben reflejar en el archivo del disco duro.
++     * @param conexion la conexión que agregó el registro.
++     */
++    private void procesaRegistroAgregado(Conexion<R> conexion) {
++        try {
++            R registro = conexion.recibeRegistro();
++            synchronized (bdd) {
++                bdd.agregaRegistro(registro);
++            }
++
++            notificaEscuchas("Registro agregado por %d.", conexion.getSerie());
++
++            for (Conexion<R> con : conexiones) {
++                if (con == conexion)
++                    continue;
++
++               con.enviaMensaje(Mensaje.REGISTRO_AGREGADO);
++               con.enviaRegistro(registro);
++            }
++        } catch (IOException ioe) {
++            notificaEscuchas("Error al agregar registro por la conexión %d.",
++                    conexion.getSerie());
++        }
++        escribeBaseDeDatos();
+     }
+ 
++    /**
++     * Procesa la solicitud de eliminar un registro, eliminándo el registro de
++     * la base de datos y notificando a las conexiones del cambio.
++     * Los cambios se deben reflejar en el archivo del disco duro.
++     * @param conexion la conexión que eliminó el registro.
++     */
++    private void procesaRegistroEliminado(Conexion<R> conexion) {
++        try {
++            R registro = conexion.recibeRegistro();
++            synchronized (bdd) {
++                bdd.eliminaRegistro(registro);
++            }
++
++            notificaEscuchas("Registro eliminado por %d.", conexion.getSerie());
++
++            for (Conexion<R> con : conexiones) {
++                if (con == conexion)
++                    continue;
++
++               con.enviaMensaje(Mensaje.REGISTRO_ELIMINADO);
++               con.enviaRegistro(registro);
++            }
++        } catch (IOException ioe) {
++            notificaEscuchas("Error al eliminar registro por la conexión %d.",
++                    conexion.getSerie());
++        }
++        escribeBaseDeDatos();
++    }
++
++    /**
++     * Procesa la solicitud de modificar un registro, modificando el registro
++     * y notificando a las conexiones del cambio.
++     * Los cambios se deben reflejar en el archivo del disco duro.
++     * @param conexion la conexión que modificó el registro.
++     */
++    private void procesaRegistroModificado(Conexion<R> conexion) {
++        try {
++            R registro1 = conexion.recibeRegistro();
++            R registro2 = conexion.recibeRegistro();
++            synchronized (bdd) {
++                bdd.modificaRegistro(registro1, registro2);
++            }
++
++            for (Conexion<R> con : conexiones) {
++                if (con == conexion)
++                    continue;
++
++               con.enviaMensaje(Mensaje.REGISTRO_MODIFICADO);
++               con.enviaRegistro(registro1);
++               con.enviaRegistro(registro2);
++            }
++        } catch (IOException ioe) {
++            notificaEscuchas("Error al modificar registro por la conexión %d.",
++                    conexion.getSerie());
++        }
++        escribeBaseDeDatos();
++    }
++
++    /**
++     * Desconecta a un cliente.
++     * @param conexion la conexión que solicitó ser desconectada.
++     */
++    private void procesaDesconectar(Conexion<R> conexion) {
++        desconectaConexion(conexion);
++    }
++
++    /**
++     * Detiene el servidor, terminando su ejecución.
++     */
++    private void procesaDetenerServicio() {
++        continuaEjecucion = false;
++
++        for (Conexion<R> con : conexiones)
++            desconectaConexion(con);
++
++        try {
++            servidor.close();
++        } catch (IOException ioe) {
++            notificaEscuchas("Error al detener el servidor.");
++        }
++    }
++
++    /**
++     * Procesa la solicitud de eco, regresando eco.
++     * @param conexion la conexión que realizó la solicitud.
++     */
++    private void procesaEco(Conexion<R> conexion) {
++        notificaEscuchas("Solicitud de eco de %d.", conexion.getSerie());
++
++        try {
++            conexion.enviaMensaje(Mensaje.ECO);
++        } catch (IOException ioe) {
++            notificaEscuchas("Error al enviar ECO a la conexión %d.",
++                    conexion.getSerie());
++        }
++    }
++
++    /**
++     * Procesa un mensaje inválido desconectando al cliente que lo mandó.
++     * @param conexion la conexión que mandó el mensaje.
++     */
++    private void procesaInvalido(Conexion<R> conexion) {
++        notificaEscuchas("Desconectando la conexión %d: Mensaje inválido.",
++                conexion.getSerie());
++        desconectaConexion(conexion);
++    }
++
++    /**
++     * Notifica a los escuchas de alguna acción que se realizó.
++     * @param formato la cadena con el formato del mensaje.
++     * @param argumentos los argumentos con los que se modificará la cadena.
++     */
++    private void notificaEscuchas(String formato, Object ... argumentos) {
++        for (EscuchaServidor escucha : escuchas)
++            escucha.procesaMensaje(formato, argumentos);
++    }
++
++    /**
++     * Desconecta a un cliente.
++     * @param conexion la conexión a eliminar.
++     */
++    private void desconectaConexion(Conexion<R> conexion) {
++        conexion.desconecta();
++        synchronized (conexiones) {
++            conexiones.elimina(conexion);
++        }
++        notificaEscuchas("La conexión %d ha sido desconectada.",
++                conexion.getSerie());
++    }
++    
++    
+     /**
+      * Crea la base de datos concreta.
+      * @return la base de datos concreta.
+diff --git a/src/main/java/mx/unam/ciencias/icc/red/ServidorBaseDeDatosEstudiantes.java b/src/main/java/mx/unam/ciencias/icc/red/ServidorBaseDeDatosEstudiantes.java
+index fd28dad..9a9fd89 100644
+--- a/src/main/java/mx/unam/ciencias/icc/red/ServidorBaseDeDatosEstudiantes.java
++++ b/src/main/java/mx/unam/ciencias/icc/red/ServidorBaseDeDatosEstudiantes.java
+@@ -21,7 +21,7 @@ public class ServidorBaseDeDatosEstudiantes
+      */
+     public ServidorBaseDeDatosEstudiantes(int puerto, String archivo)
+         throws IOException {
+-        // Aquí va su código.
++        super(puerto, archivo);
+     }
+ 
+     /**
+@@ -30,6 +30,6 @@ public class ServidorBaseDeDatosEstudiantes
+      */
+     @Override public
+     BaseDeDatos<Estudiante, CampoEstudiante> creaBaseDeDatos() {
+-        // Aquí va su código.
++        return new BaseDeDatosEstudiantes();
+     }
+ }
