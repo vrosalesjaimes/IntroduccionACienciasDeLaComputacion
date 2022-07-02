@@ -1,4 +1,4 @@
-# IntroduccionACienciasDeLaComputacion
+# Introduccion A Ciencias De La Computacion
 Prácticas, proyectos y apuntes teoricos de la materia de Ciencias de la computación.
 El temario del curso es el siguiente:
 
@@ -69,5 +69,5 @@ Torres de Hanoi
 
 Los texto utilizados para el curso son:
 - [Manual de prácticas](https://www.researchgate.net/publication/43041588_Introduccion_a_las_Ciencias_de_la_Computacion_Manual_de_Practicas/link/57bf275e08ae2f5eb32e7f10/download)
-- [Introducción a Ciencias de la Computación] (https://www.researchgate.net/publication/303692197_Introduccion_a_las_Ciencias_de_la_Computacion_con_Java)
+- [Introducción a Ciencias de la Computación](https://www.researchgate.net/publication/303692197_Introduccion_a_las_Ciencias_de_la_Computacion_con_Java)
 - [Estructuras de Datos con Java Moderno](https://www.researchgate.net/publication/330910208_Estructuras_de_Datos_con_Java_moderno_Algoritmos_Objetos_Programas)
