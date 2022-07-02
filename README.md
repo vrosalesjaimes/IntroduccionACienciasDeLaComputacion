@@ -2,10 +2,10 @@
 Prácticas, proyectos y apuntes teoricos de la materia de Ciencias de la computación.
 El temario del curso es el siguiente:
 
-### 1. Introducción al curso
-  1.Breve historia de las Ciencias de la Computación
-  2.Evolución de los lenguajes de programación
-  3.Lenguaje de máquina y ejecución de programas
+##### 1. Introducción al curso
+  1. Breve historia de las Ciencias de la Computación
+  2. Evolución de los lenguajes de programación
+  3. Lenguaje de máquina y ejecución de programas
 
 
 Representación de datos en la computadora (semana 1, sesión 2)
